@@ -75,7 +75,12 @@ const isJoined=r=>r.result==="入会";
 function rate(l){const n=l.length,w=l.filter(isJoined).length;return{n,w,r:n?w/n:0};}
 function data(){return FILTER==="全店"?RAW:RAW.filter(r=>r.store===FILTER);}
 
-fetch(API_URL).then(r=>r.json()).then(j=>{RAW=j.rows||[];init();}).catch(e=>{$("body").innerHTML='<div class="loading">読み込み失敗。APIのURLとアクセス設定（全員）を確認してください。<br>'+e+'</div>';});
+let ZIP2LL={};
+Promise.all([
+  fetch(API_URL).then(r=>r.json()),
+  fetch("zip2latlng.json").then(r=>r.json()).catch(()=>({}))
+]).then(([j,z])=>{RAW=j.rows||[];ZIP2LL=z||{};init();})
+.catch(e=>{$("body").innerHTML='<div class="loading">読み込み失敗。APIのURL/アクセス設定（全員）と、zip2latlng.jsonの配置を確認してください。<br>'+e+'</div>';});
 
 function init(){
   const stores=[...new Set(RAW.map(r=>r.store).filter(Boolean))];
@@ -105,8 +110,16 @@ function render(){
   if(TAB==="map")drawMap(D);
 }
 function drawMap(D){
-  const pts=[];D.forEach(r=>{const c=AREA_LL[String(r.zip).slice(0,3)];if(!c)return;let hh=0;for(const ch of String(r.zip))hh=(hh*31+ch.charCodeAt(0))>>>0;
-    pts.push({la:c[0]+((hh%1000)/1000-.5)*.02,lo:c[1]+(((hh>>10)%1000)/1000-.5)*.02,j:isJoined(r),name:c[2],staff:r.staff,sh:r.shusho});});
+  const pts=[];
+  D.forEach(r=>{
+    const zip=String(r.zip||"").replace(/[^0-9]/g,"");
+    let la,lo,name;
+    if(zip.length===7 && ZIP2LL[zip]){ la=ZIP2LL[zip][0]; lo=ZIP2LL[zip][1]; name=zip; }
+    else { const c=AREA_LL[zip.slice(0,3)]; if(!c)return; la=c[0]; lo=c[1]; name=c[2];
+      let hh=0;for(const ch of zip)hh=(hh*31+ch.charCodeAt(0))>>>0;
+      la+=((hh%1000)/1000-.5)*.01; lo+=(((hh>>10)%1000)/1000-.5)*.01; }
+    pts.push({la,lo,j:isJoined(r),name,staff:r.staff,sh:r.shusho,store:r.store});
+  });
   const el=document.getElementById("map");
   if(!pts.length){el.innerHTML='<div style="padding:60px 0;text-align:center;color:#94a3b8">郵便番号ありのデータがまだありません</div>';return;}
   if(typeof L==="undefined"){el.innerHTML='<div style="padding:60px 0;text-align:center;color:#94a3b8">地図の読み込みに失敗しました（ネットワーク制限の可能性）</div>';return;}
@@ -114,8 +127,10 @@ function drawMap(D){
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
   const latlngs=[];
   pts.forEach(p=>{latlngs.push([p.la,p.lo]);
-    L.circleMarker([p.la,p.lo],{radius:9,color:"#fff",weight:2,fillColor:p.j?"#0d9488":"#94a3b8",fillOpacity:.9})
-      .addTo(map).bindPopup(`<b>${p.staff}</b><br>${p.sh}<br>${p.name}・${p.j?"入会":"非入会"}`);});
-  map.fitBounds(latlngs,{padding:[40,40]});
+    L.circle([p.la,p.lo],{radius:500,color:"#fff",weight:1.5,fillColor:p.j?"#0d9488":"#94a3b8",fillOpacity:.45})
+      .addTo(map).bindPopup(`<b>${p.staff}</b>（${p.store}）<br>${p.sh}<br>${p.j?"入会":"非入会"}<br><span style="color:#94a3b8;font-size:11px">位置はエリア目安（番地単位ではありません）</span>`);
+    L.circleMarker([p.la,p.lo],{radius:4,color:"#fff",weight:1,fillColor:p.j?"#0d9488":"#94a3b8",fillOpacity:1}).addTo(map);
+  });
+  map.fitBounds(latlngs,{padding:[60,60]});
   setTimeout(()=>map.invalidateSize(),150);
 }</script>
