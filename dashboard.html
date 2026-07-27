@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>新規分析ダッシュボード（店長用）</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f5f4;color:#1e293b;font-family:-apple-system,"Hiragino Kaku Gothic ProN",sans-serif}
+.wrap{max-width:940px;margin:0 auto;padding:18px 14px 60px}
+h1{font-size:21px;margin:0}.sub{font-size:12px;color:#64748b;margin-top:3px}
+.head{border-bottom:2px solid #0f172a;padding-bottom:11px}
+.filt{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.filt button{border:1px solid #cbd5e1;background:#fff;color:#475569;font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px;cursor:pointer}
+.filt button.on{background:#0d9488;color:#fff;border-color:#0d9488}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.kpi{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:11px;text-align:center}
+.kpi .l{font-size:10px;font-weight:700;color:#64748b}.kpi .v{font-size:20px;font-weight:800}
+.kpi.dark{background:#0f172a}.kpi.dark .l{color:#5eead4}.kpi.dark .v{color:#fff}
+.tabs{display:flex;gap:6px;margin:16px 0 4px;flex-wrap:wrap}
+.tab{border:1px solid #e2e8f0;background:#fff;color:#475569;font-weight:700;font-size:12px;padding:8px 13px;border-radius:8px;cursor:pointer}
+.tab.on{background:#0f172a;color:#fff;border-color:#0f172a}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:12px}
+.card h3{margin:0 0 3px;font-size:15px}.card .note{font-size:11px;color:#64748b;margin:0 0 12px}
+.row{margin:9px 0}.row .top{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:4px}
+.row .top .n{color:#94a3b8;font-weight:500}
+.bar{height:22px;background:#f1f5f9;border-radius:5px;overflow:hidden}.bar .fill{height:100%;border-radius:5px}
+table{border-collapse:collapse;width:100%;font-size:12px;text-align:center}
+td,th{border:1px solid #e2e8f0;padding:6px 4px}th{background:#f8fafc;font-size:11px}
+td.tn{text-align:left;font-weight:700;white-space:nowrap}
+.cell .r{font-weight:800}.cell .n{font-size:10px;color:#64748b}
+.hide{display:none}.foot{font-size:11px;color:#94a3b8;text-align:center;margin-top:24px}
+.maparea{position:relative}
+#map{width:100%;height:460px;border-radius:10px;border:1px solid #e2e8f0}
+.zbtns{position:absolute;top:8px;left:8px;display:flex;flex-direction:column;gap:4px}
+.zbtns button{width:32px;height:32px;font-size:18px;font-weight:800;border:1px solid #cbd5e1;background:#fff;border-radius:6px;cursor:pointer}
+.legend{display:flex;gap:14px;font-size:12px;margin-top:10px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.loading{text-align:center;padding:60px 0;color:#64748b}
+</style>
+<div class="wrap">
+  <div class="head"><h1>新規分析ダッシュボード</h1><div class="sub">店長用・自動更新／フォーム回答をそのまま集計</div></div>
+  <div class="filt" id="storeFilter"></div>
+  <div class="kpis">
+    <div class="kpi"><div class="l">入会</div><div class="v" id="k-w">–</div></div>
+    <div class="kpi"><div class="l">母数</div><div class="v" id="k-n">–</div></div>
+    <div class="kpi dark"><div class="l">入会率</div><div class="v" id="k-r">–</div></div>
+    <div class="kpi"><div class="l">最終更新</div><div class="v" id="k-t" style="font-size:12px">–</div></div>
+  </div>
+  <div class="tabs">
+    <div class="tab on" data-t="map">地図</div><div class="tab" data-t="staff">スタッフ別</div>
+    <div class="tab" data-t="part">主訴</div><div class="tab" data-t="reason">断り理由</div>
+    <div class="tab" data-t="check">できたこと×入会</div><div class="tab" data-t="sex">性別</div>
+  </div>
+  <div id="body"><div class="loading">読み込み中…</div></div>
+  <div class="foot">データはフォーム回答から自動取得。更新はページ再読み込み。</div>
+</div>
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbx1qR7T1ax3gKgURfrqGhnGROkiVdOuolIemHvB_NddfzHYeYiedRcC8gXs6yepRmM/exec";
+const AREA_LL={"723":[34.397,133.078,"三原"],"730":[34.391,132.459,"広島中区"],"731":[34.440,132.400,"広島西/佐伯"],
+"732":[34.404,132.487,"広島東区"],"733":[34.410,132.430,"広島西区"],"734":[34.373,132.470,"広島南区"],
+"736":[34.373,132.533,"広島安芸"],"737":[34.243,132.566,"呉"],"738":[34.348,132.332,"廿日市"],"739":[34.427,132.743,"東広島"],
+"740":[34.166,132.220,"岩国"],"742":[33.963,132.101,"柳井"],"743":[33.962,131.942,"光"],"745":[34.055,131.806,"周南"],
+"746":[34.058,131.780,"周南新南陽"],"747":[34.051,131.566,"防府"],"750":[33.958,130.941,"下関"],"753":[34.178,131.474,"山口"],
+"810":[33.585,130.397,"福岡中央"],"700":[34.665,133.918,"岡山北"],"710":[34.585,133.772,"倉敷"],
+"650":[34.690,135.195,"神戸中央"],"653":[34.657,135.143,"神戸長田"],"670":[34.830,134.690,"姫路"],"673":[34.650,134.997,"明石"],"675":[34.757,134.842,"加古川"]};
+const PARTS=["肩","首","腰","背","臀部","足"];
+const CHECKS=[["chk_hearing","ヒアリング"],["chk_taikan","体感"],["chk_shuki","周期啓蒙"],["chk_shukan","習慣化啓蒙"],["chk_closing","クロージング"]];
+let RAW=[],FILTER="全店",TAB="map";
+const $=id=>document.getElementById(id);
+const pct=x=>(x*100).toFixed(0)+"%";
+const bc=r=>r>=.4?"#0d9488":r>=.25?"#38bdf8":"#f59e0b";
+const hc=r=>`rgba(13,148,136,${0.12+0.8*r})`;
+const partsOf=s=>{if(!s)return[];const o=PARTS.filter(k=>s.indexOf(k)>=0);return o.length?o:["その他"];};
+const isJoined=r=>r.result==="入会";
+function rate(l){const n=l.length,w=l.filter(isJoined).length;return{n,w,r:n?w/n:0};}
+function data(){return FILTER==="全店"?RAW:RAW.filter(r=>r.store===FILTER);}
+
+fetch(API_URL).then(r=>r.json()).then(j=>{RAW=j.rows||[];init();}).catch(e=>{$("body").innerHTML='<div class="loading">読み込み失敗。APIのURLとアクセス設定（全員）を確認してください。<br>'+e+'</div>';});
+
+function init(){
+  const stores=[...new Set(RAW.map(r=>r.store).filter(Boolean))];
+  $("storeFilter").innerHTML=['全店',...stores].map(s=>`<button data-s="${s}" class="${s==='全店'?'on':''}">${s}</button>`).join("");
+  $("storeFilter").querySelectorAll("button").forEach(b=>b.onclick=()=>{FILTER=b.dataset.s;$("storeFilter").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");render();});
+  $("k-t").textContent=new Date().toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
+  document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");TAB=t.dataset.t;render();});
+  render();
+}
+function bars(es){return es.map(([nm,s])=>`<div class="row"><div class="top"><span>${nm} <span class="n">n=${s.n}・入会${s.w}</span></span><span>${pct(s.r)}</span></div><div class="bar"><div class="fill" style="width:${Math.max(s.r*100,3)}%;background:${bc(s.r)}"></div></div></div>`).join("");}
+function grp(rows,key){const m={};rows.forEach(r=>{if(!r[key])return;(m[r[key]]=m[r[key]]||[]).push(r);});return m;}
+
+function render(){
+  const D=data(),t=rate(D);
+  $("k-w").textContent=t.w;$("k-n").textContent=t.n;$("k-r").textContent=t.n?pct(t.r):"–";
+  let h="";
+  if(TAB==="staff"){const g=grp(D,"staff");h='<div class="card"><h3>スタッフ別 入会率</h3><div class="note">nが小さいほど数字は振れる</div>'+bars(Object.entries(g).map(([k,v])=>[k,rate(v)]).sort((a,b)=>b[1].r-a[1].r))+'</div>';}
+  else if(TAB==="part"){const pm={};D.forEach(r=>partsOf(r.shusho).forEach(p=>{(pm[p]=pm[p]||[]).push(r);}));h='<div class="card"><h3>主訴（部位）別 入会率</h3><div class="note">複数部位は各々に計上</div>'+bars(Object.entries(pm).map(([k,v])=>[k,rate(v)]).sort((a,b)=>b[1].r-a[1].r))+'</div>';}
+  else if(TAB==="reason"){const rm={};D.filter(r=>r.result==="非入会").forEach(r=>{(r.reason||"未記入").split("・").forEach(x=>{x=x.trim();if(!x)return;rm[x]=(rm[x]||0)+1;});});const max=Math.max(1,...Object.values(rm));h='<div class="card"><h3>断り理由（非入会）</h3><div class="note">表面的な断り文句の件数</div>'+Object.entries(rm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="row"><div class="top"><span>${k}</span><span>${v}件</span></div><div class="bar"><div class="fill" style="width:${v/max*100}%;background:#f59e0b"></div></div></div>`).join("")+'</div>';}
+  else if(TAB==="check"){h='<div class="card"><h3>できたこと × 入会率</h3><div class="note">各行動が「できた」時と「できなかった」時の入会率。差が大きいほどその行動が効いている</div><table><tr><th>行動</th><th>できた時</th><th>できなかった時</th><th>差</th></tr>';
+    CHECKS.forEach(([key,label])=>{const ok=rate(D.filter(r=>r[key]==="できた")),ng=rate(D.filter(r=>r[key]==="できなかった"));const diff=ok.r-ng.r;
+      h+=`<tr><td class="tn">${label}</td><td class="cell" style="background:${hc(ok.r)}"><div class="r">${ok.n?pct(ok.r):"–"}</div><div class="n">${ok.w}/${ok.n}</div></td><td class="cell"><div class="r">${ng.n?pct(ng.r):"–"}</div><div class="n">${ng.w}/${ng.n}</div></td><td style="font-weight:800;color:${diff>0?'#0d9488':'#94a3b8'}">${(ok.n&&ng.n)?(diff>0?'+':'')+Math.round(diff*100)+'pt':'–'}</td></tr>`;});
+    h+='</table></div>';}
+  else if(TAB==="sex"){const g=grp(D,"sex");h='<div class="card"><h3>性別 入会率</h3>'+bars(Object.entries(g).filter(([k])=>k==="男性"||k==="女性").map(([k,v])=>[k,rate(v)]))+'</div>';}
+  else {h='<div class="card"><h3>エリア分布</h3><div class="note">緑=入会／グレー=非入会。ピンをタップで詳細。ホイール/ピンチで拡大縮小</div><div id="map"></div><div class="legend"><span><span class="dot" style="background:#0d9488"></span>入会</span><span><span class="dot" style="background:#94a3b8"></span>非入会</span></div></div>';}
+  $("body").innerHTML=h;
+  if(TAB==="map")drawMap(D);
+}
+function drawMap(D){
+  const pts=[];D.forEach(r=>{const c=AREA_LL[String(r.zip).slice(0,3)];if(!c)return;let hh=0;for(const ch of String(r.zip))hh=(hh*31+ch.charCodeAt(0))>>>0;
+    pts.push({la:c[0]+((hh%1000)/1000-.5)*.02,lo:c[1]+(((hh>>10)%1000)/1000-.5)*.02,j:isJoined(r),name:c[2],staff:r.staff,sh:r.shusho});});
+  const el=document.getElementById("map");
+  if(!pts.length){el.innerHTML='<div style="padding:60px 0;text-align:center;color:#94a3b8">郵便番号ありのデータがまだありません</div>';return;}
+  if(typeof L==="undefined"){el.innerHTML='<div style="padding:60px 0;text-align:center;color:#94a3b8">地図の読み込みに失敗しました（ネットワーク制限の可能性）</div>';return;}
+  const map=L.map("map");
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
+  const latlngs=[];
+  pts.forEach(p=>{latlngs.push([p.la,p.lo]);
+    L.circleMarker([p.la,p.lo],{radius:7,color:"#fff",weight:1.5,fillColor:p.j?"#0d9488":"#94a3b8",fillOpacity:.9})
+      .addTo(map).bindPopup(`<b>${p.staff}</b><br>${p.sh}<br>${p.name}・${p.j?"入会":"非入会"}`);});
+  map.fitBounds(latlngs,{padding:[40,40]});
+  setTimeout(()=>map.invalidateSize(),150);
+}</script>
