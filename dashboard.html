@@ -114,7 +114,7 @@ function drawMap(D){
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
   const latlngs=[];
   pts.forEach(p=>{latlngs.push([p.la,p.lo]);
-    L.circleMarker([p.la,p.lo],{radius:7,color:"#fff",weight:1.5,fillColor:p.j?"#0d9488":"#94a3b8",fillOpacity:.9})
+    L.circleMarker([p.la,p.lo],{radius:9,color:"#fff",weight:2,fillColor:p.j?"#0d9488":"#94a3b8",fillOpacity:.9})
       .addTo(map).bindPopup(`<b>${p.staff}</b><br>${p.sh}<br>${p.name}・${p.j?"入会":"非入会"}`);});
   map.fitBounds(latlngs,{padding:[40,40]});
   setTimeout(()=>map.invalidateSize(),150);
