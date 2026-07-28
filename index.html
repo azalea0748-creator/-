@@ -47,8 +47,6 @@
   <div class="seg" id="store"></div>
   <label>担当（氏名） <span class="req">*</span><span class="memo" id="m-staff"></span></label>
   <input id="staff" />
-  <label>お客様の郵便番号 <span class="qhint">ハイフンなし7桁／お客様が書いていれば必ず入力（集計用）</span></label>
-  <input id="zip" inputmode="numeric" placeholder="7300011" />
   <label>性別</label>
   <div class="seg two" id="sex"></div>
 
@@ -144,7 +142,7 @@ $("send").onclick=()=>{
     alert("日付・エリア・店舗・担当・結果・主訴は必須です");return;}
   const text=build();$("text").textContent=text;$("out").classList.add("show");$("out").scrollIntoView({behavior:"smooth"});
   const c=JSON.parse(LS.getItem(dayKey())||'{"n":0,"w":0}');c.n++;if(val("result")==="入会")c.w++;LS.setItem(dayKey(),JSON.stringify(c));renderMonth();
-  if(GAS_URL){const p={date:$("date").value,area:val("area"),store:val("store"),staff:$("staff").value,zip:$("zip").value,sex:val("sex"),
+  if(GAS_URL){const p={date:$("date").value,area:val("area"),store:val("store"),staff:$("staff").value,sex:val("sex"),
     kikkake:$("kikkake").value,shusho:[val("parts"),$("shusho_free").value].filter(Boolean).join("／"),ideal:$("ideal").value,result:val("result"),
     in_reason:$("in_reason").value,reason:[val("reason"),$("reason_free").value].filter(Boolean).join("・"),
     checks:CHECKS.map((c,i)=>c[0]+":"+(val("chk"+i)||"")).join(" / "),ap:$("ap").value,text};
@@ -153,7 +151,7 @@ $("send").onclick=()=>{
 $("copy").onclick=()=>{navigator.clipboard.writeText($("text").textContent)
   .then(()=>$("status").textContent="✓ コピーしました。LINEワークスに貼ってください")
   .catch(()=>{const r=document.createRange();r.selectNode($("text"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");$("status").textContent="✓ コピーしました";});};
-$("again").onclick=()=>{["zip","kikkake","shusho_free","ideal","in_reason","reason_free","ap"].forEach(id=>$(id).value="");
+$("again").onclick=()=>{["kikkake","shusho_free","ideal","in_reason","reason_free","ap"].forEach(id=>$(id).value="");
   ["sex","parts","result","reason"].forEach(id=>{const el=$(id);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));});
   CHECKS.forEach((c,i)=>{const el=$("chk"+i);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("ok","ng"));});
   $("inBlock").classList.remove("show");$("lostBlock").classList.remove("show");$("out").classList.remove("show");window.scrollTo({top:0,behavior:"smooth"});};
