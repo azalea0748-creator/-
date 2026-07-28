@@ -16,7 +16,9 @@
   .seg{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px}
   .seg.two{grid-template-columns:1fr 1fr}
   .seg.reason{grid-template-columns:1fr 1fr}
-  .seg button{padding:11px 6px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+  .seg.stores{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .seg.stores button{padding:11px 4px;white-space:nowrap;font-size:12px}
+  .seg button{padding:11px 6px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
   .seg.reason button{text-align:left}
   .seg button.on{background:#0f172a;color:#fff;border-color:#0f172a}
   .multi button.on{background:#0d9488;border-color:#0d9488;color:#fff}
@@ -44,7 +46,7 @@
   <label>エリア <span class="req">*</span><span class="memo" id="m-area"></span></label>
   <div class="seg two" id="area"></div>
   <label>店舗 <span class="req">*</span><span class="memo" id="m-store"></span></label>
-  <div class="seg" id="store"></div>
+  <div class="seg stores" id="store"></div>
   <label>担当（氏名） <span class="req">*</span><span class="memo" id="m-staff"></span></label>
   <input id="staff" />
   <label>性別</label>
@@ -74,7 +76,9 @@
   <label>今日できたことチェック</label>
   <div id="checks"></div>
 
-  <label>その他振り返りと次回AP <span class="qhint">アクションプランは1つに絞る</span></label>
+  <label>振り返り <span class="qhint">今日の接客で気づいたこと</span></label>
+  <textarea id="reflection"></textarea>
+  <label>次回APで意識すること <span class="qhint">次の新規接客で実践する行動を1つに絞る</span></label>
   <textarea id="ap"></textarea>
 
   <button class="send" id="send">送信してテキストを作る</button>
@@ -134,7 +138,8 @@ function build(){
   if(val("result")==="非入会"){const rs=[val("reason"),$("reason_free").value.trim()].filter(Boolean).join("・");if(rs){L.push("");L.push(`非入会理由：${rs}`);}}
   const chk=CHECKS.map((c,i)=>val("chk"+i)?`${val("chk"+i)==="できた"?"○":"×"} ${c[0]}`:null).filter(Boolean);
   if(chk.length){L.push("");L.push("【できたこと】");chk.forEach(x=>L.push(x));}
-  if($("ap").value.trim()){L.push("");L.push(`次回AP：${$("ap").value.trim()}`);}
+  if($("reflection").value.trim()){L.push("");L.push(`振り返り：${$("reflection").value.trim()}`);}
+  if($("ap").value.trim()){L.push("");L.push(`次回APで意識すること：${$("ap").value.trim()}`);}
   return L.join("\n");
 }
 $("send").onclick=()=>{
@@ -143,7 +148,7 @@ $("send").onclick=()=>{
   const text=build();$("text").textContent=text;$("out").classList.add("show");$("out").scrollIntoView({behavior:"smooth"});
   const c=JSON.parse(LS.getItem(dayKey())||'{"n":0,"w":0}');c.n++;if(val("result")==="入会")c.w++;LS.setItem(dayKey(),JSON.stringify(c));renderMonth();
   if(GAS_URL){const p={date:$("date").value,area:val("area"),store:val("store"),staff:$("staff").value,sex:val("sex"),
-    kikkake:$("kikkake").value,shusho:[val("parts"),$("shusho_free").value].filter(Boolean).join("／"),ideal:$("ideal").value,result:val("result"),
+    kikkake:$("kikkake").value,shusho:[val("parts"),$("shusho_free").value].filter(Boolean).join("／"),ideal:$("ideal").value,reflection:$("reflection").value,result:val("result"),
     in_reason:$("in_reason").value,reason:[val("reason"),$("reason_free").value].filter(Boolean).join("・"),
     checks:CHECKS.map((c,i)=>c[0]+":"+(val("chk"+i)||"")).join(" / "),ap:$("ap").value,text};
     fetch(GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p)}).then(()=>$("status").textContent="✓ 記録OK").catch(()=>{});}
@@ -151,7 +156,7 @@ $("send").onclick=()=>{
 $("copy").onclick=()=>{navigator.clipboard.writeText($("text").textContent)
   .then(()=>$("status").textContent="✓ コピーしました。LINEワークスに貼ってください")
   .catch(()=>{const r=document.createRange();r.selectNode($("text"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");$("status").textContent="✓ コピーしました";});};
-$("again").onclick=()=>{["kikkake","shusho_free","ideal","in_reason","reason_free","ap"].forEach(id=>$(id).value="");
+$("again").onclick=()=>{["kikkake","shusho_free","ideal","reflection","in_reason","reason_free","ap"].forEach(id=>$(id).value="");
   ["sex","parts","result","reason"].forEach(id=>{const el=$(id);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));});
   CHECKS.forEach((c,i)=>{const el=$("chk"+i);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("ok","ng"));});
   $("inBlock").classList.remove("show");$("lostBlock").classList.remove("show");$("out").classList.remove("show");window.scrollTo({top:0,behavior:"smooth"});};
