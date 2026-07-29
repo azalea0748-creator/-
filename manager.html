@@ -13,7 +13,7 @@
   .qhint{font-size:11px;color:#94a3b8;font-weight:400;margin-left:4px}
   input,textarea{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;background:#fff}
   textarea{min-height:64px;resize:vertical}
-  .nums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .nums{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .seg{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px}
   .seg.two{grid-template-columns:1fr 1fr}
   .seg.stores{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
@@ -37,6 +37,7 @@
   <div class="kpibar">
     <div><span class="l">入会率</span><b id="k-r">–</b></div>
     <div><span class="l">カバー率</span><b id="k-c">–</b></div>
+    <div><span class="l">カバー入会率</span><b id="k-ci">–</b></div>
     <div><span class="l">入会/母数</span><b id="k-wn">–</b></div>
   </div>
 
@@ -52,6 +53,7 @@
     <div><div class="qhint">母数</div><input id="n" inputmode="numeric" placeholder="0" /></div>
     <div><div class="qhint">入会</div><input id="w" inputmode="numeric" placeholder="0" /></div>
     <div><div class="qhint">カバー数</div><input id="cov" inputmode="numeric" placeholder="0" /></div>
+    <div><div class="qhint">うちカバー入会</div><input id="covw" inputmode="numeric" placeholder="0" /></div>
   </div>
 
   <div id="winBlock">
@@ -63,6 +65,10 @@
   <div class="seg hurdle multi" id="hurdle"></div>
   <label>繋がらなかった要因 <span class="qhint">具体的に何が引っかかったか</span></label>
   <textarea id="lose"></textarea>
+  </div>
+  <div id="coverBlock" style="display:none">
+  <label>カバーで拾えなかった要因 <span class="qhint">カバーしたのに入会に繋げられなかった理由</span></label>
+  <textarea id="cover_lose"></textarea>
   </div>
 
   <label>次回のアクション <span class="req">*</span><span class="qhint">明日以降、具体的に何をするか</span></label>
@@ -95,36 +101,50 @@ $("date").valueAsDate=new Date();
 })();
 // 数字→率を自動計算
 function num(id){const v=parseInt($(id).value,10);return isNaN(v)?0:v;}
-function calc(){const n=num("n"),w=num("w"),c=num("cov");
+function calc(){const n=num("n"),w=num("w"),c=num("cov"),cw=num("covw");
   $("k-r").textContent=n?Math.round(w/n*100)+"%":"–";
   $("k-c").textContent=n?Math.round(c/n*100)+"%":"–";
+  $("k-ci").textContent=c?Math.round(cw/c*100)+"%":"–";
   $("k-wn").textContent=n?`${w}/${n}`:"–";
+  // カバーが1以上で、拾えなかったカバーがある時だけ振り返り欄を出す
+  $("coverBlock").style.display=(c>0 && cw<c)?"block":"none";
   const hikai=n-w;
   $("winBlock").style.display=(w>0)?"block":"none";
   $("loseBlock").style.display=(hikai>0)?"block":"none";}
-["n","w","cov"].forEach(id=>$(id).addEventListener("input",calc));calc();
+["n","w","cov","covw"].forEach(id=>$(id).addEventListener("input",calc));calc();
 const val=id=>$(id).dataset.val||"";
 function build(){
-  const n=num("n"),w=num("w"),c=num("cov");
+  const n=num("n"),w=num("w"),c=num("cov"),cw=num("covw");
   const r=n?Math.round(w/n*100):0, cr=n?Math.round(c/n*100):0;
   const L=[];
   L.push(`【店長振り返り】${$("date").value}`);
   L.push(`${val("area")}／${val("store")}`);
-  L.push(`母数${n} ・ 入会${w}（${r}%） ・ カバー${c}（${cr}%）`);
+  const ci=c?Math.round(cw/c*100):0;
+  L.push(`母数${n} ・ 入会${w}（${r}%）`);
+  L.push(`カバー${c}（${cr}%） ・ うちカバー入会${cw}（${ci}%）`);
   const hikai=n-w;
   if(w>0 && $("win").value.trim()){L.push("");L.push(`繋がった要因：${$("win").value.trim()}`);}
   if(hikai>0 && val("hurdle")){L.push("");L.push(`ネックのハードル：${val("hurdle")}`);}
   if(hikai>0 && $("lose").value.trim()){L.push(`繋がらなかった要因：${$("lose").value.trim()}`);}
+  if(c>0 && cw<c && $("cover_lose").value.trim()){L.push("");L.push(`カバーで拾えなかった要因：${$("cover_lose").value.trim()}`);}
   if($("action").value.trim()){L.push("");L.push(`次回のアクション：${$("action").value.trim()}`);}
   return L.join("\n");
 }
 $("send").onclick=()=>{
+  const n=num("n"),w=num("w"),c=num("cov"),cw=num("covw");
+  const hikai=n-w;
+  // 基本必須
   if(!$("date").value||!val("area")||!val("store")||!$("n").value||!$("action").value.trim()){
     alert("日付・エリア・店舗・母数・次回のアクションは必須です");return;}
+  // 表示されている欄は必須
+  if(w>0 && !$("win").value.trim()){alert("繋がった要因を入力してください");return;}
+  if(hikai>0 && !val("hurdle")){alert("ネックになったハードルを選んでください");return;}
+  if(hikai>0 && !$("lose").value.trim()){alert("繋がらなかった要因を入力してください");return;}
+  if(c>0 && cw<c && !$("cover_lose").value.trim()){alert("カバーで拾えなかった要因を入力してください");return;}
   const text=build();$("text").textContent=text;$("out").classList.add("show");$("out").scrollIntoView({behavior:"smooth"});
-  if(GAS_URL){const n=num("n"),w=num("w"),c=num("cov");
+  if(GAS_URL){
     const p={date:$("date").value,area:val("area"),store:val("store"),
-      bosu:n,nyukai:w,cover:c,win:$("win").value,lose:$("lose").value,hurdle:val("hurdle"),action:$("action").value,text};
+      bosu:n,nyukai:w,cover:c,cover_nyukai:cw,cover_lose:$("cover_lose").value,win:$("win").value,lose:$("lose").value,hurdle:val("hurdle"),action:$("action").value,text};
     fetch(GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p)}).then(()=>$("status").textContent="✓ 記録OK").catch(()=>{});}
 };
 $("copy").onclick=()=>{navigator.clipboard.writeText($("text").textContent)
