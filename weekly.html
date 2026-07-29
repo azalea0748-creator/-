@@ -149,6 +149,18 @@ function ymd(s){
   if(!isNaN(dt.getTime()))return{d:dt.getDate(),key:dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')};
   return null;
 }
+function weekOf(d){if(d<=7)return 1;if(d<=14)return 2;if(d<=21)return 3;if(d<=28)return 4;return 5;}
+const isJoin=r=>r.result==="入会";
+const isGeo=r=>GEO.some(g=>String(r.reason).indexOf(g)>=0);
+function boot(rows){
+  RAW=rows.map(r=>{const p=ymd(r.date);return{...r,staff:normName(r.staff,r.store),_d:p?p.d:0,_mkey:p?p.key:"",_week:p?weekOf(p.d):0};}).filter(r=>r._mkey);
+  const months=[...new Set(RAW.map(r=>r._mkey))].sort();
+  $("month").innerHTML=months.map(m=>`<option value="${m}">${m.replace("-","年")}月</option>`).join("");
+  MONTH=months[months.length-1]||"";$("month").value=MONTH;
+  refreshStores();
+  ["month","area","store"].forEach(id=>$(id).onchange=()=>{if(id==="area")refreshStores();render();});
+  render();
+}
 const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
 function refreshStores(){const ar=$("area").value;let stores;if(ar==="全"){stores=[].concat(AREA_STORES["兵庫"],AREA_STORES["中国"]);}else{stores=AREA_STORES[ar]||[];}$("store").innerHTML='<option value="全">全店舗</option>'+stores.map(s=>`<option>${s}</option>`).join("");}
 function filtered(){const ar=$("area").value,st=$("store").value;return RAW.filter(r=>r._mkey===MONTH&&(ar==="全"||r.area===ar)&&(st==="全"||r.store===st));}
