@@ -64,7 +64,7 @@ tbody td.nm{text-align:left;font-weight:900;font-size:15px;white-space:nowrap}
   <div class="legend" id="legend"></div>
   <div class="panel">
     <h3>STORE MATRIX</h3>
-    <div class="note">上のボタンで 入会率／カバー率／カバー入会率 を切替。母数5件以上で、入会率モード=入会率30%未満、カバー入会率モード=カバー入会率30%未満が赤。カバー率モードはアラートなし。母数5件未満は—。</div>
+    <div class="note">上のボタンで 入会率／カバー率／カバー入会率 を切替。入会率モード=入会率30%未満、カバー入会率モード=カバー入会率30%未満が赤。カバー率モードはアラートなし。母数0は—。</div>
     <div id="table"><div class="loading">読み込み中…</div></div>
   </div>
   <div class="foot">週区切り：1-7 ／ 8-14 ／ 15-21 ／ 22-28 ／ 29-末日　｜　データ元：店長 日次振り返り</div>
@@ -154,12 +154,12 @@ function render(){
 
   function pct(x){return x==null?"—":Math.round(x*100)+"%";}
   $("legend").innerHTML = MODE==="join"
-    ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝入会率30%未満（母数5件以上）</span>'
+    ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝入会率30%未満</span>'
     : (MODE==="coverjoin"
-      ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝カバー入会率30%未満（母数5件以上）</span>'
+      ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝カバー入会率30%未満</span>'
       : '<span>カバー率＝カバー数÷母数（アラートなし）</span>');
   function cell(a,store,wk){
-    if(a.n<5){ return `<div class="wcell"><span class="wzero">—</span><span class="wsub">母数${a.n}</span></div>`; }
+    if(a.n===0){ return `<div class="wcell"><span class="wzero">—</span></div>`; }
     if(MODE==="join"){
       const bad=a.r!=null&&a.r<0.30;
       const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} 入会率${pct(a.r)}')" title="クリックで記録"`:'class="wcell"';
