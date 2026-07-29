@@ -20,6 +20,11 @@
   .seg.stores button{padding:11px 4px;white-space:nowrap;font-size:12px}
   .seg button{padding:11px 6px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
   .seg.reason button{text-align:left}
+  .geo-label{font-size:11px;font-weight:700;color:#b45309;margin:12px 0 5px;padding-top:10px;border-top:1px dashed #d6d3d1}
+  .seg.reason.geo button{border-color:#fcd34d;color:#b45309;background:#fffbeb}
+  .seg.reason.geo button.on{background:#f59e0b;color:#fff;border-color:#f59e0b}
+  .seg.reason button[data-v="次回入会予定"]{color:#0d9488;border-color:#99f6e4}
+  .seg.reason button[data-v="次回入会予定"].on{background:#0d9488;color:#fff;border-color:#0d9488}
   .seg button.on{background:#0f172a;color:#fff;border-color:#0f172a}
   .multi button.on{background:#0d9488;border-color:#0d9488;color:#fff}
   .req{color:#e11d48}.memo{font-size:11px;color:#0d9488;margin-left:6px;font-weight:700}
@@ -70,6 +75,8 @@
   <div class="onlyLost" id="lostBlock">
     <label>非入会理由 <span class="qhint">なぜ登録しなかったか（断り文句でOK・複数可）</span></label>
     <div class="seg reason multi" id="reason"></div>
+    <div class="geo-label">通えない事情（分類が別）</div>
+    <div class="seg reason multi geo" id="reason_geo"></div>
     <input id="reason_free" placeholder="その他・具体的にあれば" style="margin-top:6px" />
   </div>
 
@@ -90,9 +97,10 @@
   </div>
 </div>
 <script>
-const GAS_URL="https://script.google.com/macros/s/AKfycbx9uigD9V3afJ1xFM9Dk5hYlTzOKMW6z3PadUVtfJq1Kp_SwdlGkZr9d0GHgodv9m5olg/exec";
+const GAS_URL="https://script.google.com/macros/s/AKfycbymLb-U79cBpBA8az64TzN3G6H0dLhLOpOiMmg229O_nXEKFsO2b896Pli7AU37r8NU/exec";
 const AREAS={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
-const REASONS=["高い・予算が","今じゃなくていい","家族と相談","通う時間がない","効果が続くか不安","縛り・解約が不安","都度でいい","必要性を感じてない"];
+const REASONS=["高い・予算が","今じゃなくていい","家族と相談","通う時間がない","効果が続くか不安","縛り・解約が不安","都度でいい","必要性を感じてない","次回入会予定","クレジット未所持"];
+const GEO_REASONS=["片道1時間以上の遠方","30分圏内に店舗なし"];
 const CHECKS=[["ヒアリング","困りごとや理想を正しく把握できたか"],["体感","お客様が驚く変化があったか"],
   ["周期啓蒙","理想の周期(週1)を根拠をもとに説明できたか"],["習慣化啓蒙","今から健康習慣を作る重要性を説明できたか"],
   ["クロージング","継続への不安を解消し、背中を押す言い切りの提案ができたか"]];
@@ -107,6 +115,7 @@ seg("sex",["男性","女性"],false);
 seg("parts",["肩","首","腰","背","臀部","足","その他"],true);
 seg("result",["入会","非入会"],false,r=>{$("inBlock").classList.toggle("show",r==="入会");$("lostBlock").classList.toggle("show",r==="非入会");});
 seg("reason",REASONS,true);
+seg("reason_geo",GEO_REASONS,true);
 $("checks").innerHTML=CHECKS.map((c,i)=>`<div class="check"><div class="q">${c[0]}</div><div class="d">${c[1]}</div>
   <div class="yn" id="chk${i}"><button type="button" data-v="できた">できた</button><button type="button" data-v="できなかった">できなかった</button></div></div>`).join("");
 CHECKS.forEach((c,i)=>{const el=$("chk"+i);el.querySelectorAll("button").forEach(b=>b.onclick=()=>{el.querySelectorAll("button").forEach(x=>{x.classList.remove("ok","ng")});b.classList.add(b.dataset.v==="できた"?"ok":"ng");el.dataset.val=b.dataset.v;});});
@@ -135,7 +144,7 @@ function build(){
   L.push(`主訴：${sh}`);
   if($("ideal").value.trim())L.push(`理想：${$("ideal").value.trim()}`);
   if(val("result")==="入会"&&$("in_reason").value.trim()){L.push("");L.push(`入会理由：${$("in_reason").value.trim()}`);}
-  if(val("result")==="非入会"){const rs=[val("reason"),$("reason_free").value.trim()].filter(Boolean).join("・");if(rs){L.push("");L.push(`非入会理由：${rs}`);}}
+  if(val("result")==="非入会"){const rs=[val("reason"),val("reason_geo"),$("reason_free").value.trim()].filter(Boolean).join("・");if(rs){L.push("");L.push(`非入会理由：${rs}`);}}
   const chk=CHECKS.map((c,i)=>val("chk"+i)?`${val("chk"+i)==="できた"?"○":"×"} ${c[0]}`:null).filter(Boolean);
   if(chk.length){L.push("");L.push("【できたこと】");chk.forEach(x=>L.push(x));}
   if($("reflection").value.trim()){L.push("");L.push(`振り返り：${$("reflection").value.trim()}`);}
@@ -149,7 +158,7 @@ $("send").onclick=()=>{
   const c=JSON.parse(LS.getItem(dayKey())||'{"n":0,"w":0}');c.n++;if(val("result")==="入会")c.w++;LS.setItem(dayKey(),JSON.stringify(c));renderMonth();
   if(GAS_URL){const p={date:$("date").value,area:val("area"),store:val("store"),staff:$("staff").value,sex:val("sex"),
     kikkake:$("kikkake").value,shusho:[val("parts"),$("shusho_free").value].filter(Boolean).join("／"),ideal:$("ideal").value,reflection:$("reflection").value,result:val("result"),
-    in_reason:$("in_reason").value,reason:[val("reason"),$("reason_free").value].filter(Boolean).join("・"),
+    in_reason:$("in_reason").value,reason:[val("reason"),val("reason_geo"),$("reason_free").value].filter(Boolean).join("・"),
     checks:CHECKS.map((c,i)=>c[0]+":"+(val("chk"+i)||"")).join(" / "),ap:$("ap").value,text};
     fetch(GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p)}).then(()=>$("status").textContent="✓ 記録OK").catch(()=>{});}
 };
@@ -157,7 +166,7 @@ $("copy").onclick=()=>{navigator.clipboard.writeText($("text").textContent)
   .then(()=>$("status").textContent="✓ コピーしました。LINEワークスに貼ってください")
   .catch(()=>{const r=document.createRange();r.selectNode($("text"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");$("status").textContent="✓ コピーしました";});};
 $("again").onclick=()=>{["kikkake","shusho_free","ideal","reflection","in_reason","reason_free","ap"].forEach(id=>$(id).value="");
-  ["sex","parts","result","reason"].forEach(id=>{const el=$(id);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));});
+  ["sex","parts","result","reason","reason_geo"].forEach(id=>{const el=$(id);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));});
   CHECKS.forEach((c,i)=>{const el=$("chk"+i);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("ok","ng"));});
   $("inBlock").classList.remove("show");$("lostBlock").classList.remove("show");$("out").classList.remove("show");window.scrollTo({top:0,behavior:"smooth"});};
 </script>
