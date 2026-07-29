@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>週次 店舗ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--base:#f6f4ef;--ink:#1a1a1a;--accent:#d80c24;--line:#e3ddd2;--card:#fffdf9;--muted:#8a8378}
+*{box-sizing:border-box}
+body{margin:0;background:var(--base);color:var(--ink);font-family:"Zen Kaku Gothic New",-apple-system,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:22px 16px 70px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px solid var(--ink);padding-bottom:12px;flex-wrap:wrap;gap:10px}
+.head h1{font-family:"Anton",sans-serif;font-size:32px;font-weight:400;margin:0;line-height:1}
+.head h1 .en{display:block;font-size:11px;letter-spacing:.25em;color:var(--muted);font-weight:700;font-family:"Zen Kaku Gothic New";margin-bottom:4px}
+.head .date{font-size:12px;color:var(--muted);font-weight:700}
+.samplebar{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;padding:9px 13px;border-radius:10px;margin-top:14px;font-weight:700;display:none}
+.ctrl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.ctrl select{border:2px solid var(--line);background:var(--card);border-radius:12px;padding:14px 18px;font-size:16px;font-weight:700;font-family:inherit;color:var(--ink);cursor:pointer;min-width:130px}
+.modebar{display:flex;gap:8px;margin-top:14px}
+.modebar button{border:2px solid var(--line);background:var(--card);color:var(--muted);font-weight:700;font-size:14px;padding:11px 20px;border-radius:12px;cursor:pointer;font-family:inherit}
+.modebar button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);font-weight:700}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.panel h3{font-family:"Anton";font-size:17px;letter-spacing:.05em;margin:0 0 3px;font-weight:400}
+.panel .note{font-size:11px;color:var(--muted);margin:0 0 14px;font-weight:700}
+.matrix{overflow-x:auto}
+.matrix table{border-collapse:separate;border-spacing:0;width:100%;min-width:760px;font-size:13px}
+thead th{font-family:"Anton";font-weight:400;letter-spacing:.05em;font-size:12px;color:var(--muted);text-align:center;padding:8px;border-bottom:2px solid var(--line)}
+thead th:first-child{text-align:left}
+tbody td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--line);vertical-align:top}
+tbody td.nm{text-align:left;font-weight:900;font-size:15px;white-space:nowrap}
+.wcell{display:flex;flex-direction:column;gap:3px;align-items:center}
+.mrow{font-size:12px;font-weight:900;display:flex;gap:4px;align-items:baseline}
+.mrow .lb{font-size:9px;color:var(--muted);font-weight:700;min-width:26px;text-align:right}
+.mrow .vv{font-family:"Anton";font-size:15px}
+.mrow.bad .vv{color:var(--accent)}
+.mrow .paren{font-family:"Anton";font-size:13px;color:var(--muted);margin-left:2px}
+.mrow.bad .paren{color:var(--accent)}
+.mrow.bad{background:#fde2e2;border-radius:5px;padding:1px 6px}
+.wzero{color:#c9c2b6;font-weight:700}
+.wsub{font-size:9px;color:var(--muted);font-weight:700}
+.loading{text-align:center;padding:50px 0;color:var(--muted);font-weight:700}
+.rseg{display:flex;gap:6px;flex-wrap:wrap}
+.rseg button{flex:1;min-width:90px;padding:11px 6px;border:2px solid var(--line);background:#fff;border-radius:9px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer}
+.rseg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.clickable{cursor:pointer}
+.wcell.clickable:hover{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.foot{font-size:11px;color:var(--muted);text-align:center;margin-top:24px;font-weight:700;letter-spacing:.05em}
+</style>
+<div class="wrap">
+  <div class="head"><h1><span class="en">WEEKLY STORE REPORT</span>週次 店舗実績</h1><div class="date" id="today"></div></div>
+  <div id="sampleNote" class="samplebar"></div>
+  <div class="ctrl">
+    <select id="month"></select>
+    <select id="area"><option value="全">全エリア</option><option>兵庫</option><option>中国</option></select>
+  </div>
+  <div class="modebar">
+    <button data-m="join" class="on">入会率</button>
+    <button data-m="cover">カバー率</button>
+    <button data-m="coverjoin">カバー入会率</button>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="panel">
+    <h3>STORE MATRIX</h3>
+    <div class="note">上のボタンで 入会率／カバー率／カバー入会率 を切替。母数5件以上で、入会率モード=入会率30%未満、カバー入会率モード=カバー入会率30%未満が赤。カバー率モードはアラートなし。母数5件未満は—。</div>
+    <div id="table"><div class="loading">読み込み中…</div></div>
+  </div>
+  <div class="foot">週区切り：1-7 ／ 8-14 ／ 15-21 ／ 22-28 ／ 29-末日　｜　データ元：店長 日次振り返り</div>
+</div>
+
+<div id="recModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--card);border-radius:16px;max-width:420px;width:100%;padding:22px;border:2px solid var(--line)">
+    <h3 style="font-family:'Anton';font-size:19px;margin:0 0 4px;font-weight:400">店舗フォロー記録</h3>
+    <div id="recTarget" style="font-size:13px;color:var(--muted);font-weight:700;margin-bottom:14px"></div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px">形式</div>
+    <div class="rseg" id="rec_type"></div>
+    <div style="font-size:12px;font-weight:700;margin:14px 0 6px">所見・次アクション（任意）</div>
+    <textarea id="rec_note" style="width:100%;min-height:64px;border:2px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:14px;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="closeRec()" style="flex:1;padding:12px;border:2px solid var(--line);background:#fff;border-radius:10px;font-weight:700;font-family:inherit;cursor:pointer">キャンセル</button>
+      <button onclick="saveRec()" style="flex:2;padding:12px;border:none;background:var(--accent);color:#fff;border-radius:10px;font-weight:900;font-family:inherit;cursor:pointer">記録する</button>
+    </div>
+    <div id="recStatus" style="font-size:12px;text-align:center;margin-top:10px;color:#15803d;font-weight:700"></div>
+  </div>
+</div>
+
+<script>
+const API_URL="__API__"; // 店長集計のdoGet
+const RECORD_URL=""; // 記録書き込み用GAS。空ならデモ
+const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
+const $=id=>document.getElementById(id);
+let RAW=[],MONTH="",MODE="join";
+const WEEK_LABEL={1:"1-7",2:"8-14",3:"15-21",4:"22-28",5:"29-末"};
+$("today").textContent="更新 "+new Date().toLocaleDateString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
+
+// サンプル：店長が全日入力した想定
+function sampleRows(){
+  const stores={"兵庫":["三宮","元町","加古川","姫路"],"中国":["本通","イオン岡山"]};
+  let rows=[];const areas=Object.keys(stores);
+  areas.forEach(ar=>stores[ar].forEach(st=>{
+    for(let day=1;day<=28;day++){
+      const n=1+Math.floor(Math.random()*4); // その日の母数
+      const w=Math.round(n*(0.2+Math.random()*0.5));
+      const cov=Math.floor(Math.random()*3);
+      const covw=Math.round(cov*Math.random());
+      rows.push({date:`2026-07-${String(day).padStart(2,'0')}`,area:ar,store:st,bosu:n,nyukai:Math.min(w,n),cover:cov,covw:Math.min(covw,cov)});
+    }
+  }));
+  return rows;
+}
+function ymd(s){
+  if(!s)return null;var str=String(s);
+  var m=str.replace(/\//g,"-").match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return{d:+m[3],key:m[1]+"-"+String(+m[2]).padStart(2,'0')};
+  var MON={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+  var e=str.match(/([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{4})/);
+  if(e&&MON[e[1]])return{d:+e[2],key:e[3]+"-"+String(MON[e[1]]).padStart(2,'0')};
+  var dt=new Date(str);if(!isNaN(dt.getTime()))return{d:dt.getDate(),key:dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')};
+  return null;
+}
+function weekOf(d){if(d<=7)return 1;if(d<=14)return 2;if(d<=21)return 3;if(d<=28)return 4;return 5;}
+function num(v){const n=parseInt(v,10);return isNaN(n)?0:n;}
+
+function boot(rows){
+  RAW=rows.map(r=>{const p=ymd(r.date);return{...r,bosu:num(r.bosu),nyukai:num(r.nyukai),cover:num(r.cover),covw:num(r.covw!=null?r.covw:r.cover_nyukai),_d:p?p.d:0,_mkey:p?p.key:"",_week:p?weekOf(p.d):0};}).filter(r=>r._mkey);
+  const months=[...new Set(RAW.map(r=>r._mkey))].sort();
+  $("month").innerHTML=months.map(m=>`<option value="${m}">${m.replace("-","年")}月</option>`).join("");
+  MONTH=months[months.length-1]||"";$("month").value=MONTH;
+  document.querySelectorAll(".modebar button").forEach(b=>b.onclick=()=>{MODE=b.dataset.m;document.querySelectorAll(".modebar button").forEach(x=>x.classList.remove("on"));b.classList.add("on");render();});
+  ["month","area"].forEach(id=>$(id).onchange=()=>{MONTH=$("month").value;render();});
+  render();
+}
+function agg(rows){ // 母数・入会・カバー・カバー入会を合計→率
+  const n=rows.reduce((a,r)=>a+r.bosu,0), w=rows.reduce((a,r)=>a+r.nyukai,0),
+        c=rows.reduce((a,r)=>a+r.cover,0), cw=rows.reduce((a,r)=>a+r.covw,0);
+  return {n,w,c,cw, r:n?w/n:null, cr:n?c/n:null, cir:c?cw/c:null};
+}
+function render(){
+  const ar=$("area").value;
+  const monthRows=RAW.filter(r=>r._mkey===MONTH && (ar==="全"||r.area===ar));
+  // 店舗リスト（マスター順）
+  let stores = ar==="全" ? [].concat(AREA_STORES["兵庫"],AREA_STORES["中国"]) : AREA_STORES[ar];
+  // データにあるがマスターにない店舗も拾う
+  [...new Set(monthRows.map(r=>r.store))].forEach(s=>{if(!stores.includes(s))stores.push(s);});
+
+  const rows=stores.map(store=>{
+    const sr=monthRows.filter(r=>r.store===store);
+    const weeks={};[1,2,3,4,5].forEach(wk=>weeks[wk]=agg(sr.filter(r=>r._week===wk)));
+    const total=agg(sr);
+    return {store,weeks,total};
+  });
+
+  function pct(x){return x==null?"—":Math.round(x*100)+"%";}
+  $("legend").innerHTML = MODE==="join"
+    ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝入会率30%未満（母数5件以上）</span>'
+    : (MODE==="coverjoin"
+      ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝カバー入会率30%未満（母数5件以上）</span>'
+      : '<span>カバー率＝カバー数÷母数（アラートなし）</span>');
+  function cell(a,store,wk){
+    if(a.n<5){ return `<div class="wcell"><span class="wzero">—</span><span class="wsub">母数${a.n}</span></div>`; }
+    if(MODE==="join"){
+      const bad=a.r!=null&&a.r<0.30;
+      const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} 入会率${pct(a.r)}')" title="クリックで記録"`:'class="wcell"';
+      return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.r)}</span></div><span class="wsub">入${a.w}/母${a.n}</span></div>`;
+    }else if(MODE==="cover"){
+      return `<div class="wcell"><div class="mrow"><span class="vv">${pct(a.cr)}</span></div><span class="wsub">カバー${a.c}/母${a.n}</span></div>`;
+    }else{
+      const bad=a.cir!=null&&a.cir<0.30;
+      const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} カバー入会率${pct(a.cir)}')" title="クリックで記録"`:'class="wcell"';
+      return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.cir)}</span></div><span class="wsub">母数${a.c} 入会${a.cw}</span></div>`;
+    }
+  }
+  if(rows.length===0){$("table").innerHTML='<div class="loading">この月のデータがありません</div>';return;}
+  let h='<div class="matrix"><table><thead><tr><th>店舗</th>';
+  [1,2,3,4,5].forEach(wk=>h+=`<th>${WEEK_LABEL[wk]}</th>`);
+  h+='<th>月合計</th></tr></thead><tbody>';
+  rows.forEach(row=>{
+    h+=`<tr><td class="nm">${row.store}</td>`;
+    [1,2,3,4,5].forEach(wk=>h+=`<td>${cell(row.weeks[wk],row.store,wk)}</td>`);
+    h+=`<td>${cell(row.total,row.store,0)}</td></tr>`;
+  });
+  $("table").innerHTML=h+'</tbody></table></div>';
+}
+
+let REC_TARGET="";
+function rseg(id,opts){const el=document.getElementById(id);el.innerHTML=opts.map(o=>`<button type="button" data-v="${o}">${o}</button>`).join("");el.querySelectorAll("button").forEach(b=>b.onclick=()=>{el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");el.dataset.val=b.dataset.v;});}
+rseg("rec_type",["ロープレ","ミーティング","動画チェック"]);
+window.openRec=function(store,why){REC_TARGET=store;document.getElementById("recTarget").textContent=store+" ／ "+why;document.getElementById("recModal").style.display="flex";document.getElementById("recStatus").textContent="";};
+window.closeRec=function(){document.getElementById("recModal").style.display="none";const el=document.getElementById("rec_type");el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));document.getElementById("rec_note").value="";};
+window.saveRec=function(){
+  const type=document.getElementById("rec_type").dataset.val;
+  if(!type){alert("形式を選んでください");return;}
+  const rec={date:new Date().toISOString().slice(0,10),target:REC_TARGET,kind:"店舗",format:type,note:document.getElementById("rec_note").value,month:MONTH};
+  if(RECORD_URL){fetch(RECORD_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)}).then(()=>{document.getElementById("recStatus").textContent="✓ 記録しました";setTimeout(closeRec,900);}).catch(()=>{document.getElementById("recStatus").textContent="記録に失敗しました";});}
+  else{document.getElementById("recStatus").textContent="✓ 記録しました（デモ：本番はスプレッドに保存）";setTimeout(closeRec,1200);}
+};
+
+if(API_URL){fetch(API_URL).then(r=>r.json()).then(j=>boot(j.rows||[])).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sampleRows());});}
+else{$("sampleNote").style.display="block";$("sampleNote").textContent="サンプルデータで表示中。実データに繋ぐと自動で切り替わります。";boot(sampleRows());}
+</script>
