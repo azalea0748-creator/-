@@ -151,9 +151,12 @@ function build(){
   if($("ap").value.trim()){L.push("");L.push(`次回APで意識すること：${$("ap").value.trim()}`);}
   return L.join("\n");
 }
+let SENT=false;
 $("send").onclick=()=>{
+  if(SENT)return;
   if(!$("date").value||!val("area")||!val("store")||!$("staff").value||!val("result")||!val("parts")){
     alert("日付・エリア・店舗・担当・結果・主訴は必須です");return;}
+  SENT=true;const _b=$("send");_b.disabled=true;_b.style.opacity="0.5";_b.textContent="送信済み";
   const text=build();$("text").textContent=text;$("out").classList.add("show");$("out").scrollIntoView({behavior:"smooth"});
   const c=JSON.parse(LS.getItem(dayKey())||'{"n":0,"w":0}');c.n++;if(val("result")==="入会")c.w++;LS.setItem(dayKey(),JSON.stringify(c));renderMonth();
   if(GAS_URL){const p={date:$("date").value,area:val("area"),store:val("store"),staff:$("staff").value,sex:val("sex"),
@@ -165,7 +168,7 @@ $("send").onclick=()=>{
 $("copy").onclick=()=>{navigator.clipboard.writeText($("text").textContent)
   .then(()=>$("status").textContent="✓ コピーしました。LINEワークスに貼ってください")
   .catch(()=>{const r=document.createRange();r.selectNode($("text"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");$("status").textContent="✓ コピーしました";});};
-$("again").onclick=()=>{["kikkake","shusho_free","ideal","reflection","in_reason","reason_free","ap"].forEach(id=>$(id).value="");
+$("again").onclick=()=>{SENT=false;const _b=$("send");_b.disabled=false;_b.style.opacity="1";_b.textContent="送信してテキストを作る";["kikkake","shusho_free","ideal","reflection","in_reason","reason_free","ap"].forEach(id=>$(id).value="");
   ["sex","parts","result","reason","reason_geo"].forEach(id=>{const el=$(id);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));});
   CHECKS.forEach((c,i)=>{const el=$("chk"+i);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("ok","ng"));});
   $("inBlock").classList.remove("show");$("lostBlock").classList.remove("show");$("out").classList.remove("show");window.scrollTo({top:0,behavior:"smooth"});};
