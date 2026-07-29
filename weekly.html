@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>週次スタッフ ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--base:#f6f4ef;--ink:#1a1a1a;--accent:#d80c24;--line:#e3ddd2;--card:#fffdf9;--muted:#8a8378}
+*{box-sizing:border-box}
+body{margin:0;background:var(--base);color:var(--ink);font-family:"Zen Kaku Gothic New",-apple-system,sans-serif}
+.wrap{max-width:940px;margin:0 auto;padding:22px 16px 70px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px solid var(--ink);padding-bottom:12px;flex-wrap:wrap;gap:10px}
+.head h1{font-family:"Anton",sans-serif;font-size:32px;font-weight:400;letter-spacing:.02em;margin:0;line-height:1}
+.head h1 .en{display:block;font-size:11px;letter-spacing:.25em;color:var(--muted);font-family:"Zen Kaku Gothic New";font-weight:700;margin-bottom:4px}
+.head .date{font-size:12px;color:var(--muted);font-weight:700}
+.samplebar{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;padding:9px 13px;border-radius:10px;margin-top:14px;font-weight:700;display:none}
+.ctrl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.ctrl{gap:10px}.ctrl select{border:2px solid var(--line);background:var(--card);border-radius:12px;padding:14px 18px;font-size:16px;font-weight:700;font-family:inherit;color:var(--ink);cursor:pointer;min-width:130px}
+.wk{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.wk button{border:2px solid var(--line);background:var(--card);color:var(--muted);font-weight:700;font-size:12px;padding:8px 13px;border-radius:10px;cursor:pointer;font-family:inherit}
+.wk button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.section-label{font-family:"Anton",sans-serif;font-size:15px;letter-spacing:.08em;margin:26px 0 10px;display:flex;align-items:center;gap:10px}
+.section-label::before{content:"";width:5px;height:20px;background:var(--accent);display:inline-block;border-radius:2px}
+.count{font-family:"Anton";background:var(--accent);color:#fff;border-radius:20px;padding:1px 11px;font-size:14px}
+.count.zero{background:#16a34a}
+.acards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.acard{border-radius:14px;padding:16px 18px;border:2px solid;position:relative;overflow:hidden}
+.acard.red{background:#fff5f5;border-color:#f3b8b8}
+.acard.red::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--accent)}
+.acard.ok{background:#f0fdf4;border-color:#bbf7d0}
+.acard .who{font-family:"Anton",sans-serif;font-size:22px;letter-spacing:.02em}
+.acard .why{font-size:13px;margin-top:5px;font-weight:900;color:var(--accent)}
+.acard .det{font-size:11px;color:var(--muted);margin-top:4px;font-weight:700}
+.acard.ok .who{color:#15803d}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:18px;margin-top:14px}
+.panel h3{font-family:"Anton";font-size:17px;letter-spacing:.05em;margin:0 0 3px;font-weight:400}
+.panel .note{font-size:11px;color:var(--muted);margin:0 0 14px;font-weight:700}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+thead th{font-family:"Anton";font-weight:400;letter-spacing:.05em;font-size:12px;color:var(--muted);text-align:center;padding:6px 8px;border-bottom:2px solid var(--line)}
+thead th:first-child{text-align:left}
+tbody td{padding:11px 8px;text-align:center;border-bottom:1px solid var(--line)}
+tbody td.nm{text-align:left;font-weight:900;font-size:15px;white-space:nowrap}
+tbody tr.danger{background:#fff5f5}
+.num{font-family:"Anton";font-size:20px;font-weight:400}
+.rate{font-family:"Anton";font-size:20px;padding:3px 12px;border-radius:8px;display:inline-block;min-width:64px}
+.r-bad{background:#fde2e2;color:var(--accent)}.r-warn{background:#fef3c7;color:#b45309}.r-good{background:#dcfce7;color:#15803d}
+.flag{display:inline-block;font-size:10px;font-weight:900;color:#fff;background:var(--accent);border-radius:5px;padding:2px 7px;margin-left:8px;vertical-align:middle;letter-spacing:.03em}
+.flag.warn{background:#f59e0b}
+.loading{text-align:center;padding:50px 0;color:var(--muted);font-weight:700}
+.matrix{overflow-x:auto}
+.matrix table{min-width:640px}
+.wkcell{font-family:"Zen Kaku Gothic New";font-weight:900;font-size:13px;padding:6px 8px;border-radius:7px;display:inline-block;min-width:62px}
+.wc-bad{background:#fde2e2;color:var(--accent)}.wc-warn{background:#fef3c7;color:#b45309}.wc-good{background:#dcfce7;color:#15803d}.wc-plain{color:var(--ink)}.clickable{cursor:pointer}.wkcell.clickable:hover{outline:2px solid var(--accent);outline-offset:1px}.wc-zero{color:#c9c2b6}
+.wksub{font-size:10px;font-weight:700;opacity:.7}
+.foot{font-size:11px;color:var(--muted);text-align:center;margin-top:26px;font-weight:700;letter-spacing:.05em}
+
+.recbtn{margin-top:12px;width:100%;padding:9px;border:2px solid var(--accent);background:#fff;color:var(--accent);border-radius:9px;font-weight:900;font-family:inherit;font-size:13px;cursor:pointer}
+.recbtn:hover{background:var(--accent);color:#fff}
+.rseg{display:flex;gap:6px;flex-wrap:wrap}
+.rseg button{flex:1;min-width:80px;padding:10px 6px;border:2px solid var(--line);background:#fff;border-radius:9px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer}
+.rseg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+</style>
+<div class="wrap">
+  <div class="head">
+    <h1><span class="en">WEEKLY STAFF REPORT</span>週次スタッフ実績</h1>
+    <div class="date" id="today"></div>
+  </div>
+  <div id="sampleNote" class="samplebar"></div>
+  <div class="ctrl">
+    <select id="month"></select>
+    <select id="area"><option value="全">全エリア</option><option>兵庫</option><option>中国</option></select>
+    <select id="store"><option value="全">全店舗</option></select>
+  </div>
+  <div class="panel">
+    <h3>スタッフ別 週次</h3>
+    <div class="note">店舗の名簿順。各セル＝入会率(入会/母数)。母数5件以上で30%以下＝赤。連続で非入会が続くと（対象外除く・3件以上）名前に「◯連続外し」。右端は月合計。</div>
+    <div id="staffTable"><div class="loading">読み込み中…</div></div>
+  </div>
+  <div class="foot">週区切り：1-7 ／ 8-14 ／ 15-21 ／ 22-28 ／ 29-末日</div>
+</div>
+
+<div id="recModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--card);border-radius:16px;max-width:420px;width:100%;padding:22px;border:2px solid var(--line)">
+    <h3 style="font-family:'Anton';font-size:19px;margin:0 0 4px;font-weight:400">ロープレチェック記録</h3>
+    <div id="recTarget" style="font-size:13px;color:var(--muted);font-weight:700;margin-bottom:14px"></div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px">チェック者</div>
+    <div class="rseg" id="rec_who"></div>
+    <div style="font-size:12px;font-weight:700;margin:14px 0 6px">形式</div>
+    <div class="rseg" id="rec_type"></div>
+    <div style="font-size:12px;font-weight:700;margin:14px 0 6px">所見・次アクション（任意）</div>
+    <textarea id="rec_note" style="width:100%;min-height:64px;border:2px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:14px;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button onclick="closeRec()" style="flex:1;padding:12px;border:2px solid var(--line);background:#fff;border-radius:10px;font-weight:700;font-family:inherit;cursor:pointer">キャンセル</button>
+      <button onclick="saveRec()" style="flex:2;padding:12px;border:none;background:var(--accent);color:#fff;border-radius:10px;font-weight:900;font-family:inherit;cursor:pointer">記録する</button>
+    </div>
+    <div id="recStatus" style="font-size:12px;text-align:center;margin-top:10px;color:#15803d;font-weight:700"></div>
+  </div>
+</div>
+
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbymLb-U79cBpBA8az64TzN3G6H0dLhLOpOiMmg229O_nXEKFsO2b896Pli7AU37r8NU/exec";
+const RECORD_URL=""; // チェック記録の書き込み用GAS。空ならデモ動作
+const GEO=["クレジット未所持","片道1時間以上の遠方","30分圏内に店舗なし","次回入会予定"];
+const STAFF_MASTER={"神戸北": ["藤原あずさ", "片山享飛", "佐藤妃乃", "坂東羽菜", "藤田和斗", "善岡那菜", "戸田嵩大"], "三宮": ["坂口望", "牧村彪雅", "谷口誠弥", "塩見倖平", "藤澤直輝", "花岡龍哉", "宮本美来", "法利岳流", "久原隆志", "三俣篤史", "藤原李華", "迫水力", "熊給遥士", "須沢一茂"], "トアロード": ["森位宏平", "福島有斗", "金田稔生", "清藤剛", "白石智揮", "坂田拓未", "浅井諒治"], "元町": ["江藤勇斗", "樫根滉太郎", "太田垣敦知", "山田慶斗", "片寄洸佑", "森岡暖人"], "デュオ": ["宮脇虎之介", "小林麗次", "樽谷一輝", "西浦文崇", "長谷川舞", "陰山湧登", "西川凌牙", "政谷碧海"], "加古川": ["奥田圭太", "名倉知穂", "森田光心", "横田聖七", "山本翔人", "目叶隆人", "橋本ひとみ", "瀬戸口智絵"], "姫路": ["江崎翔悟", "松本賢人", "黒田大樹", "平郡楓雅", "田路佳久", "美根大基", "青木琴美", "藤原大将"], "イオン岡山": ["桑渕柊耶", "河上理佳子", "宮本樹", "小林鉄平", "仙田渉", "鶴田雄祐", "住吉麻生", "上田涼央", "石渕響"], "倉敷天満屋": ["宮原美咲", "林帆那", "梅野翔", "日笠希成", "有木智治", "近藤瞳"], "本通": ["田原佳輝", "河野拓実", "中嶋華那", "梅田そら", "川角龍悟", "伊達雄風", "千田一輝"], "ゆめタウン": ["原村侑希", "平良空翔", "谷平大礎", "藤江遼", "森川充晴", "清原綾乃"]};
+// 回答の担当名を店舗マスターの最適なフルネームに寄せる
+function normName(raw, store){
+  if(!raw) return raw;
+  const clean=String(raw).replace(/[\s　・,]/g,"").trim();
+  const pool=(store&&STAFF_MASTER[store])?STAFF_MASTER[store]:[].concat(...Object.values(STAFF_MASTER));
+  const pc=pool.map(n=>({full:n,c:n.replace(/\s/g,"")}));
+  let hit=pc.find(x=>x.c===clean); if(hit)return hit.full;
+  let fwd=pc.filter(x=>x.c.startsWith(clean)||clean.startsWith(x.c));
+  if(fwd.length===1)return fwd[0].full;
+  if(fwd.length>1&&store)return raw;
+  const ac=[].concat(...Object.values(STAFF_MASTER)).map(n=>({full:n,c:n.replace(/\s/g,"")}));
+  let g=ac.find(x=>x.c===clean); if(g)return g.full;
+  let gf=ac.filter(x=>x.c.startsWith(clean)||clean.startsWith(x.c));
+  if(gf.length===1)return gf[0].full;
+  return raw;
+}
+
+const $=id=>document.getElementById(id);
+let RAW=[],MONTH="";
+const WEEK_LABEL={1:"1-7日",2:"8-14日",3:"15-21日",4:"22-28日",5:"29-末日"};
+$("today").textContent="更新 "+new Date().toLocaleDateString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
+function sampleRows(){
+  const staff=["千田","伊達","中嶋","田原","川角"];
+  const stores={"兵庫":["三宮","元町","加古川"],"中国":["本通","イオン岡山"]};
+  const reasons=["高い・予算が","今じゃなくていい","効果が続くか不安","都度でいい","必要性を感じてない"];
+  let rows=[];const areas=Object.keys(stores);
+  for(let day=1;day<=28;day++){const cnt=2+Math.floor(Math.random()*4);
+    for(let k=0;k<cnt;k++){const ar=areas[Math.floor(Math.random()*areas.length)];
+      const st=stores[ar][Math.floor(Math.random()*stores[ar].length)];
+      const sf=staff[Math.floor(Math.random()*staff.length)];
+      const joined=Math.random()<0.32;
+      let reason=""; if(!joined) reason=Math.random()<0.2?GEO[Math.floor(Math.random()*GEO.length)]:reasons[Math.floor(Math.random()*reasons.length)];
+      rows.push({recv:`2026-07-${String(day).padStart(2,'0')} 10:00`,date:`2026-07-${String(day).padStart(2,'0')}`,area:ar,store:st,staff:sf,result:joined?"入会":"非入会",reason});}}
+  return rows;
+}
+function ymd(s){const m=String(s).replace(/\//g,"-").match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(!m)return null;return{d:+m[3],key:`${m[1]}-${String(+m[2]).padStart(2,'0')}`};}
+function weekOf(d){if(d<=7)return 1;if(d<=14)return 2;if(d<=21)return 3;if(d<=28)return 4;return 5;}
+const isJoin=r=>r.result==="入会";
+const isGeo=r=>GEO.some(g=>String(r.reason).indexOf(g)>=0);
+function boot(rows){
+  RAW=rows.map(r=>{const p=ymd(r.date);return{...r,staff:normName(r.staff,r.store),_d:p?p.d:0,_mkey:p?p.key:"",_week:p?weekOf(p.d):0};}).filter(r=>r._mkey);
+  const months=[...new Set(RAW.map(r=>r._mkey))].sort();
+  $("month").innerHTML=months.map(m=>`<option value="${m}">${m.replace("-","年")}月</option>`).join("");
+  MONTH=months[months.length-1]||"";$("month").value=MONTH;
+  refreshStores();
+  ["month","area","store"].forEach(id=>$(id).onchange=()=>{if(id==="area")refreshStores();render();});
+  render();
+}
+const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
+function refreshStores(){const ar=$("area").value;let stores;if(ar==="全"){stores=[].concat(AREA_STORES["兵庫"],AREA_STORES["中国"]);}else{stores=AREA_STORES[ar]||[];}$("store").innerHTML='<option value="全">全店舗</option>'+stores.map(s=>`<option>${s}</option>`).join("");}
+function filtered(){const ar=$("area").value,st=$("store").value;return RAW.filter(r=>r._mkey===MONTH&&(ar==="全"||r.area===ar)&&(st==="全"||r.store===st));}
+function render(){
+  MONTH=$("month").value;
+  const st=$("store").value;
+  const monthRows=filtered();
+  const byStaff={};monthRows.forEach(r=>{(byStaff[r.staff]=byStaff[r.staff]||[]).push(r);});
+  let names;
+  if(st!=="全" && STAFF_MASTER[st]){ names=[...STAFF_MASTER[st]]; Object.keys(byStaff).forEach(n=>{if(!names.includes(n))names.push(n);}); }
+  else { names=Object.keys(byStaff); }
+  const rows=names.map(name=>{
+    const list=byStaff[name]||[];
+    const weeks={};[1,2,3,4,5].forEach(wk=>{const wl=list.filter(r=>r._week===wk);const n=wl.length,w=wl.filter(isJoin).length;weeks[wk]={n,w,r:n?w/n:0};});
+    const n=list.length,w=list.filter(isJoin).length;
+    const seq=monthRows.filter(r=>r.staff===name&&!isGeo(r)).sort((a,b)=>(a._d-b._d)||(String(a.recv)<String(b.recv)?-1:1));
+    let streak=0;for(let k=seq.length-1;k>=0;k--){if(!isJoin(seq[k]))streak++;else break;}
+    return {name,weeks,total:{n,w,r:n?w/n:0},streak,miss:streak>=3};
+  });
+  if(rows.length===0){$("staffTable").innerHTML='<div class="loading">この月のデータがありません</div>';return;}
+  function cell(c,name,wk){
+    if(c.n===0)return '<span class="wkcell wc-zero">—</span>';
+    const bad=(c.n>=5&&c.r<=0.30);
+    if(bad){
+      const lbl=(wk?WEEK_LABEL[wk]:"月合計")+" 入会率"+Math.round(c.r*100)+"%";
+      return `<span class="wkcell wc-bad clickable" onclick="openRec('${name}','${lbl}')" title="クリックでチェック記録">${Math.round(c.r*100)}%<span class="wksub"> (${c.w}/${c.n})</span></span>`;
+    }
+    return `<span class="wkcell wc-plain">${Math.round(c.r*100)}%<span class="wksub"> (${c.w}/${c.n})</span></span>`;
+  }
+  let h='<div class="matrix"><table><thead><tr><th>スタッフ</th>';
+  [1,2,3,4,5].forEach(wk=>h+=`<th>${WEEK_LABEL[wk]}</th>`);
+  h+='<th>月合計</th></tr></thead><tbody>';
+  rows.forEach(row=>{
+    const flag=row.miss?`<span class="flag clickable" onclick="openRec('${row.name}','${row.streak}連続外し')" title="クリックでチェック記録">${row.streak}連続外し</span>`:'';
+    const zeroRow=row.total.n===0?' style="opacity:.45"':'';
+    h+=`<tr${zeroRow}><td class="nm">${row.name}${flag}</td>`;
+    [1,2,3,4,5].forEach(wk=>h+=`<td>${cell(row.weeks[wk],row.name,wk)}</td>`);
+    h+=`<td>${cell(row.total,row.name,0)}</td></tr>`;
+  });
+  $("staffTable").innerHTML=h+'</tbody></table></div>';
+}
+
+// ---- チェック記録モーダル ----
+let REC_TARGET="";
+function rseg(id,opts){const el=document.getElementById(id);el.innerHTML=opts.map(o=>`<button type="button" data-v="${o}">${o}</button>`).join("");el.querySelectorAll("button").forEach(b=>b.onclick=()=>{el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");el.dataset.val=b.dataset.v;});}
+rseg("rec_who",["店長チェック","鵜澤チェック"]);
+rseg("rec_type",["ロープレ","ミーティング","動画チェック"]);
+window.openRec=function(who,why){REC_TARGET=who;document.getElementById("recTarget").textContent=who+" ／ "+why;document.getElementById("recModal").style.display="flex";document.getElementById("recStatus").textContent="";};
+window.closeRec=function(){document.getElementById("recModal").style.display="none";["rec_who","rec_type"].forEach(id=>{const el=document.getElementById(id);el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));});document.getElementById("rec_note").value="";};
+window.saveRec=function(){
+  const who=document.getElementById("rec_who").dataset.val, type=document.getElementById("rec_type").dataset.val;
+  if(!who||!type){alert("チェック者と形式を選んでください");return;}
+  const rec={date:new Date().toISOString().slice(0,10),target:REC_TARGET,checker:who,format:type,note:document.getElementById("rec_note").value,month:MONTH,week:WEEK};
+  if(RECORD_URL){
+    fetch(RECORD_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)})
+      .then(()=>{document.getElementById("recStatus").textContent="✓ 記録しました";setTimeout(closeRec,900);}).catch(()=>{document.getElementById("recStatus").textContent="記録に失敗しました";});
+  }else{
+    document.getElementById("recStatus").textContent="✓ 記録しました（デモ：本番はスプレッドに保存）";setTimeout(closeRec,1200);
+  }
+};
+
+if(API_URL){fetch(API_URL).then(r=>r.json()).then(j=>boot(j.rows||[])).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sampleRows());});}
+else{$("sampleNote").style.display="block";$("sampleNote").textContent="サンプルデータで表示中。実データに繋ぐと自動で切り替わります。";boot(sampleRows());}
+</script>
