@@ -169,7 +169,7 @@ function render(){
     }else{
       const bad=a.cir!=null&&a.cir<0.30;
       const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} カバー入会率${pct(a.cir)}')" title="クリックで記録"`:'class="wcell"';
-      return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.cir)}</span></div><span class="wsub">母数${a.c} 入会${a.cw}</span></div>`;
+      return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.cir)}</span></div><span class="wsub">入${a.cw}/母${a.c}</span></div>`;
     }
   }
   if(rows.length===0){$("table").innerHTML='<div class="loading">この月のデータがありません</div>';return;}
