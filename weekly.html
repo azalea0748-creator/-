@@ -137,18 +137,17 @@ function sampleRows(){
       rows.push({recv:`2026-07-${String(day).padStart(2,'0')} 10:00`,date:`2026-07-${String(day).padStart(2,'0')}`,area:ar,store:st,staff:sf,result:joined?"入会":"非入会",reason});}}
   return rows;
 }
-function ymd(s){const m=String(s).replace(/\//g,"-").match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(!m)return null;return{d:+m[3],key:`${m[1]}-${String(+m[2]).padStart(2,'0')}`};}
-function weekOf(d){if(d<=7)return 1;if(d<=14)return 2;if(d<=21)return 3;if(d<=28)return 4;return 5;}
-const isJoin=r=>r.result==="入会";
-const isGeo=r=>GEO.some(g=>String(r.reason).indexOf(g)>=0);
-function boot(rows){
-  RAW=rows.map(r=>{const p=ymd(r.date);return{...r,staff:normName(r.staff,r.store),_d:p?p.d:0,_mkey:p?p.key:"",_week:p?weekOf(p.d):0};}).filter(r=>r._mkey);
-  const months=[...new Set(RAW.map(r=>r._mkey))].sort();
-  $("month").innerHTML=months.map(m=>`<option value="${m}">${m.replace("-","年")}月</option>`).join("");
-  MONTH=months[months.length-1]||"";$("month").value=MONTH;
-  refreshStores();
-  ["month","area","store"].forEach(id=>$(id).onchange=()=>{if(id==="area")refreshStores();render();});
-  render();
+function ymd(s){
+  if(!s)return null;
+  var str=String(s);
+  var m=str.replace(/\//g,"-").match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return{d:+m[3],key:m[1]+"-"+String(+m[2]).padStart(2,'0')};
+  var MON={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+  var e=str.match(/([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{4})/);
+  if(e&&MON[e[1]])return{d:+e[2],key:e[3]+"-"+String(MON[e[1]]).padStart(2,'0')};
+  var dt=new Date(str);
+  if(!isNaN(dt.getTime()))return{d:dt.getDate(),key:dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,'0')};
+  return null;
 }
 const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
 function refreshStores(){const ar=$("area").value;let stores;if(ar==="全"){stores=[].concat(AREA_STORES["兵庫"],AREA_STORES["中国"]);}else{stores=AREA_STORES[ar]||[];}$("store").innerHTML='<option value="全">全店舗</option>'+stores.map(s=>`<option>${s}</option>`).join("");}
