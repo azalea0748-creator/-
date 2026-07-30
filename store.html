@@ -74,9 +74,11 @@ tbody td.nm{text-align:left;font-weight:900;font-size:15px;white-space:nowrap}
   <div style="background:var(--card);border-radius:16px;max-width:420px;width:100%;padding:22px;border:2px solid var(--line)">
     <h3 style="font-family:'Anton';font-size:19px;margin:0 0 4px;font-weight:400">店舗フォロー記録</h3>
     <div id="recTarget" style="font-size:13px;color:var(--muted);font-weight:700;margin-bottom:14px"></div>
+    <div id="formatSection">
     <div style="font-size:12px;font-weight:700;margin-bottom:6px">形式</div>
     <div class="rseg" id="rec_type"></div>
-    <div style="font-size:12px;font-weight:700;margin:14px 0 6px">所見・次アクション（任意）</div>
+    </div>
+    <div style="font-size:12px;font-weight:700;margin:14px 0 6px" id="noteLabel">所見・次アクション（任意）</div>
     <textarea id="rec_note" style="width:100%;min-height:64px;border:2px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:14px;resize:vertical"></textarea>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button onclick="closeRec()" style="flex:1;padding:12px;border:2px solid var(--line);background:#fff;border-radius:10px;font-weight:700;font-family:inherit;cursor:pointer">キャンセル</button>
@@ -88,7 +90,7 @@ tbody td.nm{text-align:left;font-weight:900;font-size:15px;white-space:nowrap}
 
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbxYEISPGMAkpjxSWn3zqD2_rur6DwGo7Hqm1anx6SIuiCmqb2V7xot_yt0IpJ46figZdQ/exec"; // 店長集計のdoGet
-const RECORD_URL=""; // 記録書き込み用GAS。空ならデモ
+const RECORD_URL="https://script.google.com/macros/s/AKfycbwv1LAq68qfpYIy6GnOUZ8lY36FBJXvZVuWm0fy6rNlMv4DyxukYEEoYump94qnvV-tvg/exec"; // 記録書き込み用GAS。空ならデモ
 const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
 const $=id=>document.getElementById(id);
 let RAW=[],MONTH="",MODE="join";
@@ -162,13 +164,13 @@ function render(){
     if(a.n===0){ return `<div class="wcell"><span class="wzero">—</span></div>`; }
     if(MODE==="join"){
       const bad=a.r!=null&&a.r<0.30;
-      const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} 入会率${pct(a.r)}')" title="クリックで記録"`:'class="wcell"';
+      const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} 入会率${pct(a.r)}','view')" title="クリックで記録"`:'class="wcell"';
       return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.r)}</span></div><span class="wsub">入${a.w}/母${a.n}</span></div>`;
     }else if(MODE==="cover"){
       return `<div class="wcell"><div class="mrow"><span class="vv">${pct(a.cr)}</span></div><span class="wsub">カバー${a.c}/母${a.n}</span></div>`;
     }else{
       const bad=a.cir!=null&&a.cir<0.30;
-      const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} カバー入会率${pct(a.cir)}')" title="クリックで記録"`:'class="wcell"';
+      const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} カバー入会率${pct(a.cir)}','format')" title="クリックで記録"`:'class="wcell"';
       return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.cir)}</span></div><span class="wsub">入${a.cw}/母${a.c}</span></div>`;
     }
   }
@@ -177,7 +179,8 @@ function render(){
   [1,2,3,4,5].forEach(wk=>h+=`<th>${WEEK_LABEL[wk]}</th>`);
   h+='<th>月合計</th></tr></thead><tbody>';
   rows.forEach(row=>{
-    h+=`<tr><td class="nm">${row.store}</td>`;
+    const nmStyle = row.store==="元町" ? ' style="color:var(--accent)"' : '';
+    h+=`<tr><td class="nm"${nmStyle}>${row.store}</td>`;
     [1,2,3,4,5].forEach(wk=>h+=`<td>${cell(row.weeks[wk],row.store,wk)}</td>`);
     h+=`<td>${cell(row.total,row.store,0)}</td></tr>`;
   });
@@ -187,12 +190,20 @@ function render(){
 let REC_TARGET="";
 function rseg(id,opts){const el=document.getElementById(id);el.innerHTML=opts.map(o=>`<button type="button" data-v="${o}">${o}</button>`).join("");el.querySelectorAll("button").forEach(b=>b.onclick=()=>{el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");el.dataset.val=b.dataset.v;});}
 rseg("rec_type",["ロープレ","ミーティング","動画チェック"]);
-window.openRec=function(store,why){REC_TARGET=store;document.getElementById("recTarget").textContent=store+" ／ "+why;document.getElementById("recModal").style.display="flex";document.getElementById("recStatus").textContent="";};
+let REC_MODE="format";
+window.openRec=function(store,why,mode){
+  REC_TARGET=store;REC_MODE=mode||"format";
+  document.getElementById("recTarget").textContent=store+" ／ "+why;
+  document.getElementById("formatSection").style.display=(REC_MODE==="format")?"block":"none";
+  document.getElementById("noteLabel").textContent=(REC_MODE==="view")?"見解（この店舗の入会率について）":"所見・次アクション（任意）";
+  document.getElementById("recModal").style.display="flex";document.getElementById("recStatus").textContent="";
+};
 window.closeRec=function(){document.getElementById("recModal").style.display="none";const el=document.getElementById("rec_type");el.dataset.val="";el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));document.getElementById("rec_note").value="";};
 window.saveRec=function(){
   const type=document.getElementById("rec_type").dataset.val;
-  if(!type){alert("形式を選んでください");return;}
-  const rec={date:new Date().toISOString().slice(0,10),target:REC_TARGET,kind:"店舗",format:type,note:document.getElementById("rec_note").value,month:MONTH};
+  if(REC_MODE==="format" && !type){alert("形式を選んでください");return;}
+  if(REC_MODE==="view" && !document.getElementById("rec_note").value.trim()){alert("見解を入力してください");return;}
+  const rec={date:new Date().toISOString().slice(0,10),target:REC_TARGET,kind:"店舗",format:(REC_MODE==="format"?type:""),note:document.getElementById("rec_note").value,month:MONTH};
   if(RECORD_URL){fetch(RECORD_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)}).then(()=>{document.getElementById("recStatus").textContent="✓ 記録しました";setTimeout(closeRec,900);}).catch(()=>{document.getElementById("recStatus").textContent="記録に失敗しました";});}
   else{document.getElementById("recStatus").textContent="✓ 記録しました（デモ：本番はスプレッドに保存）";setTimeout(closeRec,1200);}
 };
