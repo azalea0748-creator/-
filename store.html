@@ -187,14 +187,14 @@ function render(){
 
   function pct(x){return x==null?"—":Math.round(x*100)+"%";}
   $("legend").innerHTML = MODE==="join"
-    ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝入会率30%未満</span>'
+    ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝母数5件以上で入会率30%未満</span>'
     : (MODE==="coverjoin"
-      ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝カバー入会率30%未満</span>'
-      : '<span>カバー率＝カバー数÷母数（アラートなし）</span>');
+      ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝カバー入会率20%以下</span>'
+      : '<span><span class="dot" style="background:#fde2e2"></span>赤＝カバー数1以下（カバー未実施含む）</span>');
   function cell(a,store,wk){
     if(a.n===0){ return `<div class="wcell"><span class="wzero">—</span></div>`; }
     if(MODE==="join"){
-      const bad=a.r!=null&&a.r<0.30;
+      const bad=a.r!=null&&a.n>=5&&a.r<0.30;
       if(VIEW==="follow"){
         if(!bad)return '<div class="wcell"><span class="wzero"></span></div>';
         const done=RECS.some(r=>r.target===store&&r._mkey===MONTH);
@@ -204,10 +204,17 @@ function render(){
       const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} 入会率${pct(a.r)}','view')" title="クリックで記録"`:'class="wcell"';
       return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.r)}</span></div><span class="wsub">入${a.w}/母${a.n}</span></div>`;
     }else if(MODE==="cover"){
-      if(VIEW==="follow")return '<div class="wcell"><span class="wzero"></span></div>';
-      return `<div class="wcell"><div class="mrow"><span class="vv">${pct(a.cr)}</span></div><span class="wsub">カバー${a.c}/母${a.n}</span></div>`;
+      const bad=a.c<=1;
+      if(VIEW==="follow"){
+        if(!bad)return '<div class="wcell"><span class="wzero"></span></div>';
+        const done=RECS.some(r=>r.target===store&&r._mkey===MONTH);
+        const lbl=(wk?WEEK_LABEL[wk]:'月合計')+' カバー数'+a.c;
+        return `<div class="wcell clickable" onclick="openHist('${store}','${lbl}','format')"><span class="wkcell ${done?'fc-done':'fc-undone'}">${done?'対応済':'未対応'}</span></div>`;
+      }
+      const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} カバー数${a.c}件','format')" title="クリックで記録"`:'class="wcell"';
+      return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.cr)}</span></div><span class="wsub">カバー${a.c}/母${a.n}</span></div>`;
     }else{
-      const bad=a.cir!=null&&a.cir<0.30;
+      const bad=a.cir!=null&&a.cir<=0.20;
       if(VIEW==="follow"){
         if(!bad)return '<div class="wcell"><span class="wzero"></span></div>';
         const done=RECS.some(r=>r.target===store&&r._mkey===MONTH);
