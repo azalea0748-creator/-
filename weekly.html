@@ -84,6 +84,26 @@ tbody tr.danger{background:#fff5f5}
 .rank-store{font-size:11px;color:var(--muted);font-weight:700;margin-left:6px}
 .rank-val{font-family:"Anton";font-size:22px}
 .rank-sub{font-size:11px;color:var(--muted);font-weight:700;min-width:70px;text-align:right}
+.anwrap{display:flex;flex-direction:column;gap:14px}
+.fbcard{background:#1f1e1c;color:#fff;border-radius:14px;padding:16px 18px}
+.fbttl{font-family:"Anton";font-size:13px;letter-spacing:.08em;color:#cbb89a;margin-bottom:8px}
+.fbbody{font-size:14px;line-height:1.7}
+.fbbody b{color:#ffd9a0}
+.ancard{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px 16px}
+.anh{font-family:"Anton";font-size:14px;letter-spacing:.03em;margin-bottom:10px}
+.anrow{display:flex;align-items:center;gap:10px;padding:5px 0}
+.anlbl{min-width:44px;font-weight:900;font-size:13px}
+.anlbl2{flex:1;font-weight:700;font-size:13px}
+.anbar{flex:1;height:10px;background:#eee7db;border-radius:6px;overflow:hidden}
+.anfill{height:100%;background:var(--accent)}
+.anval{font-family:"Anton";font-size:13px;min-width:76px;text-align:right;color:var(--muted)}
+.anstaff{display:flex;align-items:center;gap:12px;padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px}
+.anstaff:hover{background:#faf8f3}
+.anstaff.good{background:#f0fdf4}.anstaff.bad{background:#fff5f5}
+.ansname{flex:1;font-weight:900;font-size:15px}
+.ansrate{font-family:"Anton";font-size:20px}
+.anstaff.bad .ansrate{color:var(--accent)}.anstaff.good .ansrate{color:#15803d}
+.ansn{font-size:12px;color:var(--muted);font-weight:700;min-width:44px;text-align:right}
 .foot{font-size:11px;color:var(--muted);text-align:center;margin-top:26px;font-weight:700;letter-spacing:.05em}
 
 .recbtn{margin-top:12px;width:100%;padding:9px;border:2px solid var(--accent);background:#fff;color:var(--accent);border-radius:9px;font-weight:900;font-family:inherit;font-size:13px;cursor:pointer}
@@ -107,6 +127,7 @@ tbody tr.danger{background:#fff5f5}
     <button data-v="perf" class="on">実績</button>
     <button data-v="follow">対応履歴</button>
     <button data-v="rank">ランキング</button>
+    <button data-v="analyze">分析</button>
   </div>
   <div class="rankctrl" id="rankctrl" style="display:none">
     <div class="rseg2"><button data-rk="rate" class="on">入会率</button><button data-rk="count">入会数</button></div>
@@ -191,7 +212,8 @@ function sampleRows(){
       const sf=staff[Math.floor(Math.random()*staff.length)];
       const joined=Math.random()<0.32;
       let reason=""; if(!joined) reason=Math.random()<0.2?GEO[Math.floor(Math.random()*GEO.length)]:reasons[Math.floor(Math.random()*reasons.length)];
-      rows.push({recv:`2026-07-${String(day).padStart(2,'0')} 10:00`,date:`2026-07-${String(day).padStart(2,'0')}`,area:ar,store:st,staff:sf,result:joined?"入会":"非入会",reason});}}
+      const shushoList=["肩","首","腰","背","臀部","足"]; const shusho=shushoList[Math.floor(Math.random()*shushoList.length)];
+      rows.push({recv:`2026-07-${String(day).padStart(2,'0')} 10:00`,date:`2026-07-${String(day).padStart(2,'0')}`,area:ar,store:st,staff:sf,shusho,result:joined?"入会":"非入会",reason});}}
   return rows;
 }
 function ymd(s){
@@ -219,7 +241,7 @@ function boot(rows){
   document.querySelectorAll(".viewbar button").forEach(b=>b.onclick=()=>{
     VIEW=b.dataset.v;document.querySelectorAll(".viewbar button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
     $("rankctrl").style.display=(VIEW==="rank")?"flex":"none";
-    $("panelTitle").textContent=VIEW==="perf"?"スタッフ別 週次":(VIEW==="follow"?"スタッフ別 対応履歴":"ランキング");
+    $("panelTitle").textContent=VIEW==="perf"?"スタッフ別 週次":(VIEW==="follow"?"スタッフ別 対応履歴":(VIEW==="rank"?"ランキング":"分析・フィードバック"));
     render();
   });
   document.querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{RK=b.dataset.rk;document.querySelectorAll('[data-rk]').forEach(x=>x.classList.remove("on"));b.classList.add("on");render();});
@@ -233,6 +255,78 @@ function recDate(s){var m=String(s).replace(/\//g,"-").match(/(\d{4})-(\d{1,2})-
 const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
 function refreshStores(){const ar=$("area").value;let stores;if(ar==="全"){stores=[].concat(AREA_STORES["兵庫"],AREA_STORES["中国"]);}else{stores=AREA_STORES[ar]||[];}$("store").innerHTML='<option value="全">全店舗</option>'+stores.map(s=>`<option>${s}</option>`).join("");}
 function filtered(){const ar=$("area").value,st=$("store").value;return RAW.filter(r=>r._mkey===MONTH&&(ar==="全"||r.area===ar)&&(st==="全"||r.store===st));}
+function renderAnalyze(){
+  MONTH=$("month").value;
+  const ar=$("area").value, st=$("store").value;
+  let pool=RAW.filter(r=>r._mkey===MONTH);
+  if(st!=="全") pool=pool.filter(r=>r.store===st);
+  else if(ar!=="全") pool=pool.filter(r=>r.area===ar);
+  const total=pool.length, joined=pool.filter(isJoin).length;
+  const rate=total?Math.round(joined/total*100):0;
+  const reasonCount={};
+  pool.filter(r=>!isJoin(r)&&!isGeo(r)).forEach(r=>{
+    String(r.reason||"").split(/[・,]/).forEach(x=>{x=x.trim();if(x&&!GEO.some(g=>x.indexOf(g)>=0))reasonCount[x]=(reasonCount[x]||0)+1;});
+  });
+  const topReasons=Object.entries(reasonCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const byShu={};
+  pool.forEach(r=>{const key=(String(r.shusho||"").split(/[／\/]/)[0]||"不明").trim();(byShu[key]=byShu[key]||[]).push(r);});
+  const shuStats=Object.entries(byShu).map(([k,rs])=>({k,n:rs.length,j:rs.filter(isJoin).length,r:rs.length?rs.filter(isJoin).length/rs.length:0})).filter(x=>x.n>=2).sort((a,b)=>b.r-a.r);
+  const byStaff={};
+  pool.forEach(r=>{(byStaff[r.staff]=byStaff[r.staff]||[]).push(r);});
+  const staffStats=Object.entries(byStaff).map(([name,rs])=>({name,n:rs.length,j:rs.filter(isJoin).length,r:rs.length?rs.filter(isJoin).length/rs.length:0})).filter(x=>x.n>=2).sort((a,b)=>b.r-a.r);
+  let fb=[];
+  if(total>0){
+    fb.push("今月の入会率は<b>"+rate+"%</b>（"+joined+"/"+total+"）。");
+    if(topReasons.length) fb.push("最も多い断り理由は「<b>"+topReasons[0][0]+"</b>」（"+topReasons[0][1]+"件）。");
+    if(shuStats.length>=2){ const best=shuStats[0],worst=shuStats[shuStats.length-1];
+      fb.push("主訴別では<b>"+best.k+"</b>が高く（"+Math.round(best.r*100)+"%）、<b>"+worst.k+"</b>が低い（"+Math.round(worst.r*100)+"%）。");}
+    const low=staffStats.filter(x=>x.n>=3&&x.r<0.2);
+    if(low.length) fb.push("入会率が特に低い（3件以上・20%未満）：<b>"+low.map(x=>x.name).join("、")+"</b>。個別フォロー推奨。");
+  } else { fb.push("この条件のデータがまだありません。"); }
+  let h='<div class="anwrap">';
+  h+='<div class="fbcard"><div class="fbttl">全体フィードバック</div><div class="fbbody">'+fb.join(" ")+'</div></div>';
+  if(shuStats.length){
+    h+='<div class="ancard"><div class="anh">主訴別 入会率</div>';
+    shuStats.forEach(x=>{h+='<div class="anrow"><span class="anlbl">'+x.k+'</span><div class="anbar"><div class="anfill" style="width:'+Math.round(x.r*100)+'%"></div></div><span class="anval">'+Math.round(x.r*100)+'% ('+x.j+'/'+x.n+')</span></div>';});
+    h+='</div>';
+  }
+  if(topReasons.length){
+    h+='<div class="ancard"><div class="anh">断られた理由 TOP5（対象外除く）</div>';
+    topReasons.forEach(function(e){h+='<div class="anrow"><span class="anlbl2">'+e[0]+'</span><span class="anval">'+e[1]+'件</span></div>';});
+    h+='</div>';
+  }
+  h+='<div class="ancard"><div class="anh">スタッフ別（クリックで詳細）</div>';
+  staffStats.forEach(x=>{
+    const cls=x.r>=0.5?"good":(x.r<0.2?"bad":"");
+    h+='<div class="anstaff '+cls+'" onclick="openStaffAnalysis(\''+x.name+'\')"><span class="ansname">'+x.name+'</span><span class="ansrate">'+Math.round(x.r*100)+'%</span><span class="ansn">'+x.j+'/'+x.n+'</span></div>';
+  });
+  h+='</div></div>';
+  $("staffTable").innerHTML=h;
+}
+window.openStaffAnalysis=function(name){
+  const pool=RAW.filter(r=>r._mkey===MONTH&&r.staff===name);
+  const total=pool.length, joined=pool.filter(isJoin).length;
+  const rate=total?Math.round(joined/total*100):0;
+  const byShu={};
+  pool.forEach(r=>{const key=(String(r.shusho||"").split(/[／\/]/)[0]||"不明").trim();(byShu[key]=byShu[key]||[]).push(r);});
+  const shu=Object.entries(byShu).map(([k,rs])=>({k,n:rs.length,j:rs.filter(isJoin).length})).sort((a,b)=>b.n-a.n);
+  const rc={};
+  pool.filter(r=>!isJoin(r)&&!isGeo(r)).forEach(r=>{String(r.reason||"").split(/[・,]/).forEach(x=>{x=x.trim();if(x&&!GEO.some(g=>x.indexOf(g)>=0))rc[x]=(rc[x]||0)+1;});});
+  const reasons=Object.entries(rc).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const geoCount=pool.filter(r=>!isJoin(r)&&isGeo(r)).length;
+  let b='<div style="font-size:26px;font-family:\'Anton\';margin-bottom:2px">'+rate+'<span style="font-size:15px">%</span></div>';
+  b+='<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:14px">入会 '+joined+' / 接客 '+total+(geoCount?'（対象外 '+geoCount+'件は別）':'')+'</div>';
+  b+='<div style="font-size:12px;font-weight:900;margin:12px 0 6px">主訴別</div>';
+  shu.forEach(x=>{const r=x.n?Math.round(x.j/x.n*100):0;b+='<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--line)"><span>'+x.k+'</span><span style="font-weight:900">'+r+'% <span style="color:var(--muted);font-weight:700">('+x.j+'/'+x.n+')</span></span></div>';});
+  if(reasons.length){
+    b+='<div style="font-size:12px;font-weight:900;margin:14px 0 6px">断られた理由（対象外除く）</div>';
+    reasons.forEach(function(e){b+='<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--line)"><span>'+e[0]+'</span><span style="font-weight:900;color:var(--accent)">'+e[1]+'件</span></div>';});
+  }
+  document.getElementById("histTarget").textContent=name+" の分析";
+  document.getElementById("histBody").innerHTML=b;
+  document.getElementById("histModal").style.display="flex";
+};
+
 function renderRank(){
   MONTH=$("month").value;
   const ar=$("area").value, st=$("store").value;
@@ -272,6 +366,7 @@ function renderRank(){
 function render(){
   MONTH=$("month").value;
   if(VIEW==="rank"){renderRank();return;}
+  if(VIEW==="analyze"){renderAnalyze();return;}
   const st=$("store").value;
   const monthRows=filtered();
   const byStaff={};monthRows.forEach(r=>{(byStaff[r.staff]=byStaff[r.staff]||[]).push(r);});
