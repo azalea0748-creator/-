@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>新規フォロー ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--base:#f6f4ef;--ink:#1a1a1a;--accent:#d80c24;--line:#e3ddd2;--card:#fffdf9;--muted:#8a8378;--green:#15803d;--indigo:#4338ca}
+*{box-sizing:border-box}
+body{margin:0;background:var(--base);color:var(--ink);font-family:"Zen Kaku Gothic New",-apple-system,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 14px 80px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px solid var(--ink);padding-bottom:12px;flex-wrap:wrap;gap:10px}
+.head h1{font-family:"Anton",sans-serif;font-size:24px;font-weight:400;margin:0;line-height:1}
+.head h1 .en{display:block;font-size:11px;letter-spacing:.2em;color:var(--muted);font-weight:700;font-family:"Zen Kaku Gothic New";margin-bottom:4px}
+.head .date{font-size:13px;color:var(--muted);font-weight:700}
+.samplebar{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;padding:9px 13px;border-radius:10px;margin-top:14px;font-weight:700;display:none}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.bar select{border:2px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:700;font-family:inherit;color:var(--ink)}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.mc{border-radius:12px;padding:12px 14px}
+.mc .l{font-size:12px;font-weight:700}
+.mc .v{font-size:26px;font-family:"Anton";font-weight:400;line-height:1.1;margin-top:2px}
+.mc .v small{font-size:13px;font-family:"Zen Kaku Gothic New";font-weight:700}
+.mc.today{background:#eaf1fb}.mc.today .l,.mc.today .v{color:#185fa5}
+.mc.risk{background:#fde2e2}.mc.risk .l,.mc.risk .v{color:var(--accent)}
+.mc.plain{background:var(--card);border:2px solid var(--line)}.mc.plain .l{color:var(--muted)}
+.sec{margin-top:22px}
+.sech{font-size:14px;font-weight:900;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sech .ic{font-size:16px}
+.matrix{overflow-x:auto}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:520px;font-size:13px;background:var(--card);border-radius:12px;overflow:hidden;border:2px solid var(--line)}
+thead th{font-family:"Anton";font-weight:400;font-size:11px;color:var(--muted);text-align:left;padding:9px 12px;border-bottom:2px solid var(--line);background:#faf8f3}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--line)}
+tbody tr:last-child td{border-bottom:none}
+tr.rk td{background:#fff5f5}
+.no{font-weight:900;cursor:pointer;border-bottom:2px dotted var(--muted)}
+.no:hover{color:var(--accent);border-color:var(--accent)}
+.tag{font-size:11px;font-weight:900;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.tag.book{background:#fef3c7;color:#92700e}
+.tag.done{background:#dcfce7;color:var(--green)}
+.tag.miss{background:#fde2e2;color:var(--accent)}
+.tag.cancel{background:#fff;color:var(--accent);border:1px solid #f3b0b0}
+.empty{text-align:center;padding:24px;color:var(--muted);font-weight:700;background:var(--card);border-radius:12px;border:2px solid var(--line)}
+.loading{text-align:center;padding:50px 0;color:var(--muted);font-weight:700}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;padding:16px}
+.modal .box{background:var(--card);border-radius:16px;max-width:460px;width:100%;padding:22px;border:2px solid var(--line);max-height:88vh;overflow:auto}
+.modal h3{font-family:"Anton";font-size:20px;margin:0 0 4px;font-weight:400}
+.modal .close{float:right;border:none;background:transparent;font-size:22px;cursor:pointer;color:var(--muted)}
+.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.fev{font-size:12px;padding:4px 10px;border-radius:8px;font-weight:700}
+.fev.come{background:#dcfce7;color:var(--green)}
+.fev.cancel{background:#fde2e2;color:var(--accent)}
+.fev.plan{background:#eef2ff;color:var(--indigo)}
+.arrow{color:var(--muted)}
+.foot{font-size:11px;color:var(--muted);text-align:center;margin-top:24px;font-weight:700;line-height:1.6}
+</style>
+<div class="wrap">
+  <div class="head">
+    <h1><span class="en">NEW MEMBER FOLLOW</span>新規フォロー ダッシュボード</h1>
+    <div class="date" id="todayLabel"></div>
+  </div>
+  <div id="sampleNote" class="samplebar"></div>
+  <div class="bar">
+    <select id="fStore"><option value="全">全店舗</option></select>
+  </div>
+
+  <div class="cards">
+    <div class="mc today"><div class="l">本日の対象</div><div class="v" id="cToday">0<small> 名</small></div></div>
+    <div class="mc risk"><div class="l">離脱リスク</div><div class="v" id="cRisk">0<small> 名</small></div></div>
+    <div class="mc plain"><div class="l">今週キャンセル</div><div class="v" id="cCancel">0<small> 件</small></div></div>
+    <div class="mc plain"><div class="l">追跡中 合計</div><div class="v" id="cTotal">0<small> 名</small></div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sech"><span class="ic" style="color:#185fa5">●</span> 本日コンタクト対象（今日が予約日）</div>
+    <div id="todayList"><div class="loading">読み込み中…</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sech"><span class="ic" style="color:var(--accent)">▲</span> 離脱リスク（キャンセル後 再予約なし・来店が空いている）</div>
+    <div id="riskList"></div>
+  </div>
+
+  <div class="foot">
+    本日対象＝今日が予約日の人。離脱リスク＝直近がキャンセルで先の予約なし、または前回来店から<span id="thL">7</span>日以上。<br>
+    会員番号をクリックすると、その人の予約の流れが見られます。来店5回で卒業（表示から外れます）。
+  </div>
+</div>
+
+<div class="modal" id="flowModal"><div class="box">
+  <button class="close" onclick="closeFlow()">×</button>
+  <h3 id="flowTitle">会員 —</h3>
+  <div id="flowMeta" style="font-size:12px;color:var(--muted);font-weight:700"></div>
+  <div class="flow" id="flowBody"></div>
+  <div id="flowNote" style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6"></div>
+</div></div>
+
+<script>
+const API_URL="https://script.google.com/a/macros/dsgn.co.jp/s/AKfycbxG3KaaG5kKeZC5I8gjiD8jb99oVR7xR9m9TWVVyQnoUghrjSENL693BL00dzPxyZqg/exec"; // ダッシュボード読み取りGASのURL
+const RISK_DAYS=7; // 前回来店からこの日数以上でリスク
+const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
+const ALL_STORES=[].concat(AREA_STORES["兵庫"],AREA_STORES["中国"]);
+const $=id=>document.getElementById(id);
+let ALL=[],TODAY=new Date(),FIXED_STORE=null;
+$("thL").textContent=RISK_DAYS;
+
+function parseDate(s){if(!s)return null;const m=String(s).replace(/\//g,"-").match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(!m)return null;return new Date(+m[1],+m[2]-1,+m[3]);}
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0');}
+function daysBetween(a,b){return Math.floor((b-a)/(86400000));}
+function isContacted(v){return v && String(v).trim()!=="";}
+
+// 直近の来店日
+function lastVisit(m){
+  const vs=m.events.filter(e=>e.result==="来店"&&e.date).map(e=>parseDate(e.date)).filter(Boolean).sort((a,b)=>b-a);
+  return vs.length?vs[0]:(m.first?parseDate(m.first):null);
+}
+// 今日が予約日か（予定 or 未来の予約で今日）
+function isToday(m){
+  const t=ymd(TODAY);
+  return m.events.some(e=>e.date===t && (e.result==="予定"||e.result===""||e.result==="来店"));
+}
+// その会員の今日の予約イベント
+function todaysEvent(m){const t=ymd(TODAY);return m.events.find(e=>e.date===t);}
+// 離脱リスク
+function isRisk(m){
+  // 直近イベントがキャンセルで、その後に予定がない
+  const sorted=m.events.filter(e=>e.date).slice().sort((a,b)=>parseDate(a.date)-parseDate(b.date));
+  const hasFuturePlan=m.events.some(e=>{const d=parseDate(e.date);return d&&d>=TODAY&&(e.result==="予定"||e.result==="");});
+  if(hasFuturePlan) return false; // 先の予約がある人はリスクじゃない
+  const lastCancel = sorted.length && sorted[sorted.length-1].result==="キャンセル";
+  const lv=lastVisit(m);
+  const gap = lv? daysBetween(lv,TODAY) : null;
+  return lastCancel || (gap!=null && gap>=RISK_DAYS);
+}
+// 卒業(5回以上)は除外
+function active(m){return m.visits<5;}
+
+function boot(data){
+  ALL=(data.members||[]).filter(active);
+  if(data.today){const d=parseDate(data.today);if(d)TODAY=d;}
+  $("todayLabel").textContent=(TODAY.getMonth()+1)+"月"+TODAY.getDate()+"日";
+  const params=new URLSearchParams(location.search);
+  const qs=params.get("store");
+  if(qs&&ALL_STORES.includes(qs)){FIXED_STORE=qs;$("fStore").style.display="none";document.querySelector(".head h1").innerHTML='<span class="en">NEW MEMBER FOLLOW</span>'+qs+' 新規フォロー';}
+  const stores=[...new Set(ALL.map(m=>m.store))];
+  $("fStore").innerHTML='<option value="全">全店舗</option>'+stores.map(s=>`<option>${s}</option>`).join("");
+  $("fStore").onchange=render;
+  render();
+}
+
+function pool(){const st=FIXED_STORE||$("fStore").value;return st==="全"?ALL:ALL.filter(m=>m.store===st);}
+
+function render(){
+  const rows=pool();
+  const todays=rows.filter(isToday);
+  const risks=rows.filter(m=>isRisk(m)&&!isToday(m));
+  // 今週キャンセル
+  const weekAgo=new Date(TODAY);weekAgo.setDate(weekAgo.getDate()-6);
+  let cancelCount=0;
+  rows.forEach(m=>m.events.forEach(e=>{if(e.result==="キャンセル"&&e.date){const d=parseDate(e.date);if(d&&d>=weekAgo&&d<=TODAY)cancelCount++;}}));
+
+  $("cToday").innerHTML=todays.length+'<small> 名</small>';
+  $("cRisk").innerHTML=risks.length+'<small> 名</small>';
+  $("cCancel").innerHTML=cancelCount+'<small> 件</small>';
+  $("cTotal").innerHTML=rows.length+'<small> 名</small>';
+
+  // 本日対象
+  if(todays.length){
+    let h='<div class="matrix"><table><thead><tr><th>会員番号</th><th>来店</th><th>状況</th><th>コンタクト</th></tr></thead><tbody>';
+    todays.forEach(m=>{
+      const ev=todaysEvent(m);
+      const done=ev&&isContacted(ev.contact);
+      h+=`<tr><td><span class="no" onclick="openFlow('${m.memberno}')">${m.memberno}</span></td><td>${m.visits+1}回目</td><td><span class="tag book">予約あり</span></td><td>${done?'<span class="tag done">済</span>':'<span class="tag miss">未・要接触</span>'}</td></tr>`;
+    });
+    $("todayList").innerHTML=h+'</tbody></table></div>';
+  } else $("todayList").innerHTML='<div class="empty">本日が予約日の対象者はいません</div>';
+
+  // 離脱リスク
+  if(risks.length){
+    let h='<div class="matrix"><table><thead><tr><th>会員番号</th><th>来店</th><th>前回から</th><th>状況</th></tr></thead><tbody>';
+    risks.forEach(m=>{
+      const lv=lastVisit(m);const gap=lv?daysBetween(lv,TODAY):null;
+      const sorted=m.events.filter(e=>e.date).slice().sort((a,b)=>parseDate(a.date)-parseDate(b.date));
+      const lastCancel=sorted.length&&sorted[sorted.length-1].result==="キャンセル";
+      h+=`<tr class="rk"><td><span class="no" onclick="openFlow('${m.memberno}')">${m.memberno}</span></td><td>${m.visits}回</td><td>${gap!=null?gap+'日':'—'}</td><td><span class="tag cancel">${lastCancel?'キャンセル後 予約なし':'予約なし'}</span></td></tr>`;
+    });
+    $("riskList").innerHTML=h+'</tbody></table></div>';
+  } else $("riskList").innerHTML='<div class="empty">離脱リスクの対象者はいません</div>';
+}
+
+window.openFlow=function(no){
+  const m=pool().find(x=>x.memberno===no)||ALL.find(x=>x.memberno===no);
+  if(!m)return;
+  $("flowTitle").textContent="会員 "+m.memberno;
+  $("flowMeta").textContent=m.store+"　"+(m.sex||"")+"　来店"+m.visits+"回（あと"+(5-m.visits)+"回で卒業）";
+  const sorted=m.events.filter(e=>e.date).slice().sort((a,b)=>parseDate(a.date)-parseDate(b.date));
+  let h='';
+  sorted.forEach((e,i)=>{
+    const cls=e.result==="来店"?"come":(e.result==="キャンセル"?"cancel":"plan");
+    const md=e.date.slice(5).replace("-","/");
+    const con=e.result==="来店"&&isContacted(e.contact)?"・コ":"";
+    h+=`<span class="fev ${cls}">${md} ${e.result||"予約"}${con}</span>`;
+    if(i<sorted.length-1)h+='<span class="arrow">→</span>';
+  });
+  $("flowBody").innerHTML=h||'<span style="color:var(--muted)">予約履歴なし</span>';
+  // コメント
+  let note="";
+  const hasFuture=m.events.some(e=>{const d=parseDate(e.date);return d&&d>=TODAY&&(e.result==="予定"||e.result==="");});
+  const lastEv=sorted[sorted.length-1];
+  if(lastEv&&lastEv.result==="キャンセル"&&!hasFuture) note="直近がキャンセルで先の予約なし → 離脱リスク。早めの接触を。";
+  else if(!hasFuture){const lv=lastVisit(m);const gap=lv?daysBetween(lv,TODAY):null;if(gap!=null&&gap>=RISK_DAYS)note="前回来店から"+gap+"日空いて予約なし → 要フォロー。";}
+  else note="先の予約あり。予約日に接触の機会。";
+  $("flowNote").textContent=note;
+  $("flowModal").style.display="flex";
+};
+window.closeFlow=function(){$("flowModal").style.display="none";};
+
+// サンプル
+function sample(){
+  return {today:ymd(new Date()), members:[
+    {store:"ゆめタウン",memberno:"10231",sex:"男性",first:"2026-07-15",visits:4,events:[
+      {date:"2026-07-18",result:"来店",contact:"○"},{date:"2026-07-23",result:"来店",contact:""},
+      {date:"2026-07-28",result:"来店",contact:"○"},{date:"2026-07-31",result:"来店",contact:""},
+      {date:ymd(new Date()),result:"予定",contact:""}]},
+    {store:"ゆめタウン",memberno:"10240",sex:"男性",first:"2026-07-10",visits:3,events:[
+      {date:"2026-07-10",result:"来店",contact:"○"},{date:"2026-07-17",result:"来店",contact:""},
+      {date:"2026-07-24",result:"来店",contact:""},{date:"2026-08-01",result:"キャンセル",contact:""}]},
+    {store:"ゆめタウン",memberno:"10255",sex:"女性",first:"2026-08-02",visits:1,events:[
+      {date:"2026-08-02",result:"来店",contact:""},{date:ymd(new Date()),result:"予定",contact:""}]},
+    {store:"ゆめタウン",memberno:"12345",sex:"女性",first:"2026-06-27",visits:5,events:[
+      {date:"2026-07-04",result:"来店",contact:""}]},
+  ]};
+}
+
+if(API_URL){fetch(API_URL).then(r=>r.json()).then(boot).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sample());});}
+else{$("sampleNote").style.display="block";$("sampleNote").textContent="サンプルデータで表示中。読み取りGASのURLを入れると実データに切り替わります。";boot(sample());}
+</script>
