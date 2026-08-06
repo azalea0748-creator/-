@@ -104,6 +104,8 @@ tbody tr.danger{background:#fff5f5}
 .ansrate{font-family:"Anton";font-size:20px}
 .anstaff.bad .ansrate{color:var(--accent)}.anstaff.good .ansrate{color:#15803d}
 .ansn{font-size:12px;color:var(--muted);font-weight:700;min-width:44px;text-align:right}
+.nmclick{cursor:pointer;border-bottom:2px dotted var(--muted)}
+.nmclick:hover{color:var(--accent);border-color:var(--accent)}
 .foot{font-size:11px;color:var(--muted);text-align:center;margin-top:26px;font-weight:700;letter-spacing:.05em}
 
 .recbtn{margin-top:12px;width:100%;padding:9px;border:2px solid var(--accent);background:#fff;color:var(--accent);border-radius:9px;font-weight:900;font-family:inherit;font-size:13px;cursor:pointer}
@@ -304,12 +306,8 @@ function renderAnalyze(){
     topReasons.forEach(function(e){h+='<div class="anrow"><span class="anlbl2">'+e[0]+'</span><span class="anval">'+e[1]+'件</span></div>';});
     h+='</div>';
   }
-  h+='<div class="ancard"><div class="anh">スタッフ別（クリックで詳細）</div>';
-  staffStats.forEach(x=>{
-    const cls=x.r>=0.5?"good":(x.r<0.2?"bad":"");
-    h+='<div class="anstaff '+cls+'" onclick="openStaffAnalysis(\''+x.name+'\')"><span class="ansname">'+x.name+'</span><span class="ansrate">'+Math.round(x.r*100)+'%</span><span class="ansn">'+x.j+'/'+x.n+'</span></div>';
-  });
-  h+='</div></div>';
+  h+='<div class="fbcard" style="background:#e9e4d8;color:var(--muted)"><div class="fbbody" style="font-size:12px">スタッフ個人の分析は、<b style="color:var(--ink)">「実績」でスタッフ名をクリック</b>すると開きます。</div></div>';
+  h+='</div>';
   $("staffTable").innerHTML=h;
 }
 window.openStaffAnalysis=function(name){
@@ -414,7 +412,7 @@ function render(){
     rows.forEach(row=>{
       const flag=row.miss?`<span class="flag clickable" onclick="openRec('${row.name}','${row.streak}連続非入会')" title="クリックでチェック記録">${row.streak}連続非入会</span>`:'';
       const zeroRow=row.total.n===0?' style="opacity:.45"':'';
-      h+=`<tr${zeroRow}><td class="nm">${row.name}${flag}</td>`;
+      h+=`<tr${zeroRow}><td class="nm"><span class="nmclick" onclick="openStaffAnalysis('${row.name}')" title="クリックで分析">${row.name}</span>${flag}</td>`;
       [1,2,3,4,5].forEach(wk=>h+=`<td>${cell(row.weeks[wk],row.name,wk)}</td>`);
       h+=`<td>${cell(row.total,row.name,0)}</td></tr>`;
     });
