@@ -255,6 +255,15 @@ function recDate(s){var m=String(s).replace(/\//g,"-").match(/(\d{4})-(\d{1,2})-
 const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
 function refreshStores(){const ar=$("area").value;let stores;if(ar==="全"){stores=[].concat(AREA_STORES["兵庫"],AREA_STORES["中国"]);}else{stores=AREA_STORES[ar]||[];}$("store").innerHTML='<option value="全">全店舗</option>'+stores.map(s=>`<option>${s}</option>`).join("");}
 function filtered(){const ar=$("area").value,st=$("store").value;return RAW.filter(r=>r._mkey===MONTH&&(ar==="全"||r.area===ar)&&(st==="全"||r.store===st));}
+const BODY_PARTS=["肩","首","腰","背","臀部","足","膝","股関節","腕","頭"];
+function parts_(shusho){
+  const head=String(shusho||"").split(/[／\/]/)[0];
+  let found=head.split(/[・,、]/).map(x=>x.trim()).filter(Boolean);
+  let out=found.filter(x=>BODY_PARTS.includes(x));
+  if(out.length===0) out=["その他"];
+  return [...new Set(out)];
+}
+
 function renderAnalyze(){
   MONTH=$("month").value;
   const ar=$("area").value, st=$("store").value;
@@ -269,7 +278,7 @@ function renderAnalyze(){
   });
   const topReasons=Object.entries(reasonCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const byShu={};
-  pool.forEach(r=>{const key=(String(r.shusho||"").split(/[／\/]/)[0]||"不明").trim();(byShu[key]=byShu[key]||[]).push(r);});
+  pool.forEach(r=>{ parts_(r.shusho).forEach(key=>{(byShu[key]=byShu[key]||[]).push(r);}); });
   const shuStats=Object.entries(byShu).map(([k,rs])=>({k,n:rs.length,j:rs.filter(isJoin).length,r:rs.length?rs.filter(isJoin).length/rs.length:0})).filter(x=>x.n>=2).sort((a,b)=>b.r-a.r);
   const byStaff={};
   pool.forEach(r=>{(byStaff[r.staff]=byStaff[r.staff]||[]).push(r);});
@@ -308,7 +317,7 @@ window.openStaffAnalysis=function(name){
   const total=pool.length, joined=pool.filter(isJoin).length;
   const rate=total?Math.round(joined/total*100):0;
   const byShu={};
-  pool.forEach(r=>{const key=(String(r.shusho||"").split(/[／\/]/)[0]||"不明").trim();(byShu[key]=byShu[key]||[]).push(r);});
+  pool.forEach(r=>{ parts_(r.shusho).forEach(key=>{(byShu[key]=byShu[key]||[]).push(r);}); });
   const shu=Object.entries(byShu).map(([k,rs])=>({k,n:rs.length,j:rs.filter(isJoin).length})).sort((a,b)=>b.n-a.n);
   const rc={};
   pool.filter(r=>!isJoin(r)&&!isGeo(r)).forEach(r=>{String(r.reason||"").split(/[・,]/).forEach(x=>{x=x.trim();if(x&&!GEO.some(g=>x.indexOf(g)>=0))rc[x]=(rc[x]||0)+1;});});
