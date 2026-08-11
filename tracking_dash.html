@@ -41,6 +41,12 @@ tr.rk td{background:#fff5f5}
 .tag.miss{background:#fde2e2;color:var(--accent)}
 .tag.cancel{background:#fff;color:var(--accent);border:1px solid #f3b0b0}
 .empty{text-align:center;padding:24px;color:var(--muted);font-weight:700;background:var(--card);border-radius:12px;border:2px solid var(--line)}
+.tabbar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabbtn{border:2px solid var(--line);background:var(--card);color:var(--muted);font-weight:700;font-size:13px;padding:9px 14px;border-radius:10px;cursor:pointer;font-family:inherit}
+.tabbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tabbtn span{font-family:"Anton";margin-left:4px}
+.tag.upd{background:#fef3c7;color:#92700e}
+.tag.none{background:#f3f4f6;color:#6b7280}
 .loading{text-align:center;padding:50px 0;color:var(--muted);font-weight:700}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;padding:16px}
 .modal .box{background:var(--card);border-radius:16px;max-width:460px;width:100%;padding:22px;border:2px solid var(--line);max-height:88vh;overflow:auto}
@@ -77,13 +83,22 @@ tr.rk td{background:#fff5f5}
   </div>
 
   <div class="sec">
-    <div class="sech"><span class="ic" style="color:var(--accent)">▲</span> 離脱リスク（キャンセル後 再予約なし・来店が空いている）</div>
+    <div class="sech"><span class="ic" style="color:var(--accent)">▲</span> 離脱リスク（未来の予約なし・キャンセルや来店が空いている）</div>
     <div id="riskList"></div>
   </div>
 
+  <div class="sec">
+    <div class="tabbar">
+      <button class="tabbtn on" data-tab="update">要データ更新 <span id="bUpdate">0</span></button>
+      <button class="tabbtn" data-tab="nobook">未予約者 <span id="bNobook">0</span></button>
+      <button class="tabbtn" data-tab="all">全顧客一覧 <span id="bAll">0</span></button>
+    </div>
+    <div id="tabList"></div>
+  </div>
+
   <div class="foot">
-    本日対象＝今日が予約日の人。離脱リスク＝直近がキャンセルで先の予約なし、または前回来店から<span id="thL">7</span>日以上。<br>
-    会員番号をクリックすると、その人の予約の流れが見られます。来店5回で卒業（表示から外れます）。
+    予約あり＝未来の日程で予定/予約の入力がある人。要データ更新＝予約日が過ぎたのに結果(来店/キャンセル)が未入力の人（更新してください）。<br>
+    未予約者＝未来の予約が入っていない人。会員番号をクリックすると予約の流れが見られます。来店5回で卒業。
   </div>
 </div>
 
@@ -96,7 +111,6 @@ tr.rk td{background:#fff5f5}
 </div></div>
 
 <script>
-const API_URL="https://script.google.com/a/macros/dsgn.co.jp/s/AKfycbxG3KaaG5kKeZC5I8gjiD8jb99oVR7xR9m9TWVVyQnoUghrjSENL693BL00dzPxyZqg/exec"; // ダッシュボード読み取りGASのURL
 const RISK_DAYS=7; // 前回来店からこの日数以上でリスク
 const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
 const ALL_STORES=[].concat(AREA_STORES["兵庫"],AREA_STORES["中国"]);
@@ -117,16 +131,39 @@ function lastVisit(m){
 // 今日が予約日か（予定 or 未来の予約で今日）
 function isToday(m){
   const t=ymd(TODAY);
-  return m.events.some(e=>e.date===t && (e.result==="予定"||e.result===""||e.result==="来店"));
+  return m.events.some(e=>{
+    if(e.date!==t) return false;
+    const r=String(e.result||"").trim();
+    return r!=="キャンセル";
+  });
 }
 // その会員の今日の予約イベント
 function todaysEvent(m){const t=ymd(TODAY);return m.events.find(e=>e.date===t);}
-// 離脱リスク
+// 予約あり：未来(今日以降)の日程で予定/予約/入力がある(キャンセル除く)
+function hasFutureBooking(m){
+  return m.events.some(e=>{
+    const d=parseDate(e.date);
+    if(!d || d<TODAY) return false;
+    const r=String(e.result||"").trim();
+    if(r==="キャンセル") return false;
+    return true;
+  });
+}
+// 要データ更新：予約日が過去なのに結果(来店/キャンセル)が未入力で放置
+function needsUpdate(m){
+  return m.events.some(e=>{
+    const d=parseDate(e.date);
+    if(!d || d>=TODAY) return false;
+    const r=String(e.result||"").trim();
+    return r!=="来店" && r!=="キャンセル";
+  });
+}
+// 未予約：未来の予約が1件もない
+function hasNoBooking(m){ return !hasFutureBooking(m); }
+// 離脱リスク：未来予約なし かつ (直近キャンセル または 前回来店からRISK_DAYS以上)
 function isRisk(m){
-  // 直近イベントがキャンセルで、その後に予定がない
+  if(hasFutureBooking(m)) return false;
   const sorted=m.events.filter(e=>e.date).slice().sort((a,b)=>parseDate(a.date)-parseDate(b.date));
-  const hasFuturePlan=m.events.some(e=>{const d=parseDate(e.date);return d&&d>=TODAY&&(e.result==="予定"||e.result==="");});
-  if(hasFuturePlan) return false; // 先の予約がある人はリスクじゃない
   const lastCancel = sorted.length && sorted[sorted.length-1].result==="キャンセル";
   const lv=lastVisit(m);
   const gap = lv? daysBetween(lv,TODAY) : null;
@@ -141,14 +178,21 @@ function boot(data){
   $("todayLabel").textContent=(TODAY.getMonth()+1)+"月"+TODAY.getDate()+"日";
   const params=new URLSearchParams(location.search);
   const qs=params.get("store");
-  if(qs&&ALL_STORES.includes(qs)){FIXED_STORE=qs;$("fStore").style.display="none";document.querySelector(".head h1").innerHTML='<span class="en">NEW MEMBER FOLLOW</span>'+qs+' 新規フォロー';}
+  if(qs&&ALL_STORES.some(s=>normStore(s)===normStore(qs))){FIXED_STORE=qs;$("fStore").style.display="none";document.querySelector(".head h1").innerHTML='<span class="en">NEW MEMBER FOLLOW</span>'+qs+' 新規フォロー';}
   const stores=[...new Set(ALL.map(m=>m.store))];
   $("fStore").innerHTML='<option value="全">全店舗</option>'+stores.map(s=>`<option>${s}</option>`).join("");
   $("fStore").onchange=render;
+  document.querySelectorAll(".tabbtn").forEach(b=>b.onclick=()=>{
+    CUR_TAB=b.dataset.tab;
+    document.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    render();
+  });
   render();
 }
 
-function pool(){const st=FIXED_STORE||$("fStore").value;return st==="全"?ALL:ALL.filter(m=>m.store===st);}
+function normStore(x){return String(x||"").replace(/\s/g,"").replace(/店$/,"");}
+function pool(){const st=FIXED_STORE||$("fStore").value;if(st==="全")return ALL;const n=normStore(st);return ALL.filter(m=>normStore(m.store)===n);}
 
 function render(){
   const rows=pool();
@@ -186,6 +230,49 @@ function render(){
     });
     $("riskList").innerHTML=h+'</tbody></table></div>';
   } else $("riskList").innerHTML='<div class="empty">離脱リスクの対象者はいません</div>';
+
+  // タブ用の各リスト件数
+  const updates=rows.filter(needsUpdate);
+  const nobooks=rows.filter(m=>hasNoBooking(m)&&!needsUpdate(m));
+  $("bUpdate").textContent=updates.length;
+  $("bNobook").textContent=nobooks.length;
+  $("bAll").textContent=rows.length;
+  renderTab(rows,updates,nobooks);
+}
+
+let CUR_TAB="update";
+function renderTab(rows,updates,nobooks){
+  function lastBook(m){const bs=m.events.filter(e=>e.date).map(e=>parseDate(e.date)).filter(Boolean).sort((a,b)=>b-a);return bs.length?bs[0]:null;}
+  if(CUR_TAB==="update"){
+    if(!updates.length){$("tabList").innerHTML='<div class="empty">要データ更新の人はいません</div>';return;}
+    let h='<div class="matrix"><table><thead><tr><th>会員番号</th><th>来店</th><th>過ぎた予約日</th><th>状況</th></tr></thead><tbody>';
+    updates.forEach(m=>{
+      const past=m.events.filter(e=>{const d=parseDate(e.date);return d&&d<TODAY&&e.result!=="来店"&&e.result!=="キャンセル";}).map(e=>e.date).sort().pop();
+      h+=`<tr class="rk"><td><span class="no" onclick="openFlow('${m.memberno}')">${m.memberno}</span></td><td>${m.visits}回</td><td>${past?past.slice(5).replace('-','/'):'—'}</td><td><span class="tag upd">結果を更新してください</span></td></tr>`;
+    });
+    $("tabList").innerHTML=h+'</tbody></table></div>';
+  } else if(CUR_TAB==="nobook"){
+    if(!nobooks.length){$("tabList").innerHTML='<div class="empty">未予約者はいません</div>';return;}
+    let h='<div class="matrix"><table><thead><tr><th>会員番号</th><th>来店</th><th>前回から</th><th>状況</th></tr></thead><tbody>';
+    nobooks.forEach(m=>{
+      const lv=lastVisit(m);const gap=lv?daysBetween(lv,TODAY):null;
+      h+=`<tr><td><span class="no" onclick="openFlow('${m.memberno}')">${m.memberno}</span></td><td>${m.visits}回</td><td>${gap!=null?gap+'日':'—'}</td><td><span class="tag none">未予約</span></td></tr>`;
+    });
+    $("tabList").innerHTML=h+'</tbody></table></div>';
+  } else { // all 全顧客
+    if(!rows.length){$("tabList").innerHTML='<div class="empty">会員がいません</div>';return;}
+    const sorted=rows.slice().sort((a,b)=>b.visits-a.visits);
+    let h='<div class="matrix"><table><thead><tr><th>会員番号</th><th>店舗</th><th>来店回数</th><th>次回予約</th><th>最終コンタクト</th></tr></thead><tbody>';
+    sorted.forEach(m=>{
+      const book=hasFutureBooking(m);
+      const bookLabel=book?'<span class="tag book">予約あり</span>':(needsUpdate(m)?'<span class="tag upd">要更新</span>':'<span class="tag none">未予約</span>');
+      // 最終コンタクト日
+      const cs=m.events.filter(e=>isContacted(e.contact)&&e.date).map(e=>parseDate(e.date)).filter(Boolean).sort((a,b)=>b-a);
+      const lastContact=cs.length?ymd(cs[0]).slice(5).replace('-','/'):'—';
+      h+=`<tr><td><span class="no" onclick="openFlow('${m.memberno}')">${m.memberno}</span></td><td>${m.store}</td><td>${m.visits}回</td><td>${bookLabel}</td><td>${lastContact}</td></tr>`;
+    });
+    $("tabList").innerHTML=h+'</tbody></table></div>';
+  }
 }
 
 window.openFlow=function(no){
@@ -205,7 +292,7 @@ window.openFlow=function(no){
   $("flowBody").innerHTML=h||'<span style="color:var(--muted)">予約履歴なし</span>';
   // コメント
   let note="";
-  const hasFuture=m.events.some(e=>{const d=parseDate(e.date);return d&&d>=TODAY&&(e.result==="予定"||e.result==="");});
+  const hasFuture=hasFutureBooking(m);
   const lastEv=sorted[sorted.length-1];
   if(lastEv&&lastEv.result==="キャンセル"&&!hasFuture) note="直近がキャンセルで先の予約なし → 離脱リスク。早めの接触を。";
   else if(!hasFuture){const lv=lastVisit(m);const gap=lv?daysBetween(lv,TODAY):null;if(gap!=null&&gap>=RISK_DAYS)note="前回来店から"+gap+"日空いて予約なし → 要フォロー。";}
@@ -232,6 +319,25 @@ function sample(){
   ]};
 }
 
-if(API_URL){fetch(API_URL).then(r=>r.json()).then(boot).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sample());});}
-else{$("sampleNote").style.display="block";$("sampleNote").textContent="サンプルデータで表示中。読み取りGASのURLを入れると実データに切り替わります。";boot(sample());}
+const API_URL="__API__";
+const STORE_KEYS={"神戸北":"kobekita2026","三宮":"sannomiya2026","トアロード":"tor2026","元町":"motomachi2026","デュオ":"duo2026","加古川":"kakogawa2026","姫路":"himeji2026","イオン岡山":"okayama2026","倉敷天満屋":"kurashiki2026","本通":"hondori2026","ゆめタウン":"yumetown2026"};
+const ALL_KEY="areamanager2026";
+function normStore2(x){return String(x||"").replace(/\s/g,"").replace(/店$/,"");}
+(function(){
+  const params=new URLSearchParams(location.search);
+  const store=(params.get("store")||"").trim();
+  const key=(params.get("key")||"").trim();
+  let ok=false;
+  if(store===""){ ok=(key===ALL_KEY); }
+  else { const exp=STORE_KEYS[store]||STORE_KEYS[normStore2(store)]; ok=(exp&&key===exp); }
+  if(!ok){
+    document.body.innerHTML='<div style="font-family:sans-serif;max-width:420px;margin:60px auto;text-align:center;color:#333"><h2 style="color:#d80c24">アクセスできません</h2><p>URLの合言葉が正しくありません。<br>配布されたURLをそのままお使いください。</p></div>';
+    return;
+  }
+  if(API_URL && API_URL!=="__API__"){
+    fetch(API_URL).then(r=>r.json()).then(boot).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sample());});
+  } else {
+    $("sampleNote").style.display="block";$("sampleNote").textContent="サンプル表示中（GASのURL未設定）";boot(sample());
+  }
+})();
 </script>
