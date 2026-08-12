@@ -56,6 +56,14 @@
     <div><div class="qhint">うちカバー入会</div><input id="covw" inputmode="numeric" placeholder="0" /></div>
   </div>
 
+  <div id="bookBlock" style="display:none;background:#fff5f5;border:2px solid #d80c24;border-radius:12px;padding:14px 14px 4px;margin:14px 0;">
+    <label style="color:#d80c24;font-weight:800;font-size:15px;">★ 入会者の次回予約 <span class="qhint" style="display:block;color:#a04;font-weight:600;margin-top:2px;">入会した人のうち、次回予約を取れた人数と、そのうち80分以上コースの人数</span></label>
+    <div class="nums">
+      <div><div class="qhint">次回予約を取った</div><input id="book" inputmode="numeric" placeholder="0" style="border-color:#d80c24;" /></div>
+      <div><div class="qhint">うち80分以上コース</div><input id="book80" inputmode="numeric" placeholder="0" style="border-color:#d80c24;" /></div>
+    </div>
+  </div>
+
   <div id="winBlock">
   <label>繋がった要因 <span class="qhint">入会に繋がった理由</span></label>
   <textarea id="win"></textarea>
@@ -110,8 +118,9 @@ function calc(){const n=num("n"),w=num("w"),c=num("cov"),cw=num("covw");
   $("coverBlock").style.display=(c>0 && cw<c)?"block":"none";
   const hikai=n-w;
   $("winBlock").style.display=(w>0)?"block":"none";
+  {var _bb=$("bookBlock");if(_bb)_bb.style.display=(w>0)?"block":"none";}
   $("loseBlock").style.display=(hikai>0)?"block":"none";}
-["n","w","cov","covw"].forEach(id=>$(id).addEventListener("input",calc));calc();
+["n","w","cov","covw","book","book80"].forEach(id=>{var el=$(id);if(el)el.addEventListener("input",calc);});calc();
 const val=id=>$(id).dataset.val||"";
 function build(){
   const n=num("n"),w=num("w"),c=num("cov"),cw=num("covw");
@@ -122,6 +131,7 @@ function build(){
   const ci=c?Math.round(cw/c*100):0;
   L.push(`母数${n} ・ 入会${w}（${r}%）`);
   L.push(`カバー${c}（${cr}%） ・ うちカバー入会${cw}（${ci}%）`);
+  if(w>0){const bk=num("book"),bk80=num("book80");const br=w?Math.round(bk/w*100):0;L.push(`次回予約${bk}／入会${w}（${br}%） ・ うち80分以上${bk80}`);}
   const hikai=n-w;
   if(w>0 && $("win").value.trim()){L.push("");L.push(`繋がった要因：${$("win").value.trim()}`);}
   if(hikai>0 && val("hurdle")){L.push("");L.push(`ネックのハードル：${val("hurdle")}`);}
@@ -147,7 +157,7 @@ $("send").onclick=()=>{
   const text=build();$("text").textContent=text;$("out").classList.add("show");$("out").scrollIntoView({behavior:"smooth"});
   if(GAS_URL){
     const p={date:$("date").value,area:val("area"),store:val("store"),
-      bosu:n,nyukai:w,cover:c,cover_nyukai:cw,cover_lose:$("cover_lose").value,win:$("win").value,lose:$("lose").value,hurdle:val("hurdle"),action:$("action").value,text};
+      bosu:n,nyukai:w,cover:c,cover_nyukai:cw,cover_lose:$("cover_lose").value,win:$("win").value,lose:$("lose").value,hurdle:val("hurdle"),action:$("action").value,next_book:(w>0?num("book"):0),next_book80:(w>0?num("book80"):0),text};
     fetch(GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p)}).then(()=>$("status").textContent="✓ 記録OK").catch(()=>{});}
 };
 $("copy").onclick=()=>{navigator.clipboard.writeText($("text").textContent)
