@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>店長 日次振り返り</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f5f5f4;color:#1e293b;font-family:-apple-system,"Hiragino Kaku Gothic ProN",sans-serif}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 14px 60px}
+  h1{font-size:20px;margin:0 0 2px}.sub{font-size:12px;color:#64748b}
+  .kpibar{margin-top:10px;background:#0f172a;color:#fff;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-around;font-size:12px;text-align:center}
+  .kpibar .l{color:#94a3b8;font-size:10px}.kpibar b{font-size:17px;display:block}
+  label{display:block;font-size:12px;font-weight:700;color:#334155;margin:15px 0 5px}
+  .qhint{font-size:11px;color:#94a3b8;font-weight:400;margin-left:4px}
+  input,textarea{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;background:#fff}
+  textarea{min-height:64px;resize:vertical}
+  .nums{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .seg{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px}
+  .seg.two{grid-template-columns:1fr 1fr}
+  .seg.stores{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .seg.stores button{padding:11px 4px;white-space:nowrap;font-size:12px}
+  .seg.hurdle{grid-template-columns:1fr 1fr}
+  .seg button{padding:11px 6px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:#0f172a;color:#fff;border-color:#0f172a}
+  .multi button.on{background:#0d9488;border-color:#0d9488;color:#fff}
+  .req{color:#e11d48}.memo{font-size:11px;color:#0d9488;margin-left:6px;font-weight:700}
+  .send{margin-top:22px;width:100%;padding:15px;background:#0d9488;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:800;cursor:pointer}
+  .out{margin-top:18px;background:#0f172a;border-radius:12px;padding:16px;color:#fff;display:none}.out.show{display:block}
+  .out pre{white-space:pre-wrap;font-size:13px;line-height:1.6;margin:0 0 12px;font-family:inherit}
+  .copy{width:100%;padding:13px;background:#5eead4;color:#0f172a;border:none;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer}
+  .status{font-size:12px;margin-top:8px;text-align:center;color:#5eead4}
+  .again{width:100%;padding:11px;margin-top:8px;background:transparent;color:#94a3b8;border:1px solid #334155;border-radius:8px;font-size:13px;cursor:pointer}
+  .hblock{display:none}.hblock.show{display:block}
+</style>
+<div class="wrap">
+  <h1>店長 日次振り返り</h1>
+  <div class="sub">その日の店全体を1件で。送信 → コピーしてLINEワークスに貼る</div>
+  <div class="kpibar">
+    <div><span class="l">入会率</span><b id="k-r">–</b></div>
+    <div><span class="l">カバー率</span><b id="k-c">–</b></div>
+    <div><span class="l">カバー入会率</span><b id="k-ci">–</b></div>
+    <div><span class="l">入会/母数</span><b id="k-wn">–</b></div>
+  </div>
+
+  <label>日付 <span class="req">*</span></label>
+  <input type="date" id="date" />
+  <label>エリア <span class="req">*</span><span class="memo" id="m-area"></span></label>
+  <div class="seg two" id="area"></div>
+  <label>店舗 <span class="req">*</span><span class="memo" id="m-store"></span></label>
+  <div class="seg stores" id="store"></div>
+
+  <label>数字（その日の新規） <span class="req">*</span></label>
+  <div class="nums">
+    <div><div class="qhint">母数</div><input id="n" inputmode="numeric" placeholder="0" /></div>
+    <div><div class="qhint">入会</div><input id="w" inputmode="numeric" placeholder="0" /></div>
+    <div><div class="qhint">カバー数</div><input id="cov" inputmode="numeric" placeholder="0" /></div>
+    <div><div class="qhint">うちカバー入会</div><input id="covw" inputmode="numeric" placeholder="0" /></div>
+  </div>
+
+  <div id="bookBlock" style="display:none;background:#fff5f5;border:2px solid #d80c24;border-radius:12px;padding:14px 14px 4px;margin:14px 0;">
+    <label style="color:#d80c24;font-weight:800;font-size:15px;">★ 入会者の次回予約 <span class="qhint" style="display:block;color:#a04;font-weight:600;margin-top:2px;">入会した人のうち、次回予約を取れた人数と、そのうち80分以上コースの人数</span></label>
+    <div class="nums">
+      <div><div class="qhint">次回予約を取った</div><input id="book" inputmode="numeric" placeholder="0" style="border-color:#d80c24;" /></div>
+      <div><div class="qhint">うち80分以上コース</div><input id="book80" inputmode="numeric" placeholder="0" style="border-color:#d80c24;" /></div>
+    </div>
+  </div>
+
+  <div id="winBlock">
+  <label>繋がった要因 <span class="qhint">入会に繋がった理由</span></label>
+  <textarea id="win"></textarea>
+  </div>
+  <div id="loseBlock">
+  <label>ネックになったハードル <span class="qhint">非入会の裏にあるもの・複数可</span></label>
+  <div class="seg hurdle multi" id="hurdle"></div>
+  <label>繋がらなかった要因 <span class="qhint">具体的に何が引っかかったか</span></label>
+  <textarea id="lose"></textarea>
+  </div>
+  <div id="coverBlock" style="display:none">
+  <label>カバーで拾えなかった要因 <span class="qhint">カバーしたのに入会に繋げられなかった理由</span></label>
+  <textarea id="cover_lose"></textarea>
+  </div>
+
+  <label>次回のアクション <span class="req">*</span><span class="qhint">明日以降、具体的に何をするか</span></label>
+  <textarea id="action"></textarea>
+
+  <button class="send" id="send">送信してテキストを作る</button>
+  <div class="out" id="out">
+    <pre id="text"></pre>
+    <button class="copy" id="copy">この内容をコピー</button>
+    <div class="status" id="status"></div>
+    <button class="again" id="again">閉じる</button>
+  </div>
+</div>
+<script>
+const GAS_URL="https://script.google.com/macros/s/AKfycbxYEISPGMAkpjxSWn3zqD2_rur6DwGo7Hqm1anx6SIuiCmqb2V7xot_yt0IpJ46figZdQ/exec"; // 店長用GASのウェブアプリURLを後で入れる
+const AREAS={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
+const HURDLES=["不安","不信","不要","不適","不急"];
+const LS=window.localStorage,$=id=>document.getElementById(id);
+function seg(id,opts,multi,cb){const el=$(id);el.innerHTML=opts.map(o=>`<button type="button" data-v="${o}">${o}</button>`).join("");
+  el.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    if(multi){b.classList.toggle("on");el.dataset.val=[...el.querySelectorAll("button.on")].map(x=>x.dataset.v).join("・");}
+    else{el.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");el.dataset.val=b.dataset.v;}
+    if(cb)cb(el.dataset.val);});}
+seg("area",Object.keys(AREAS),false,a=>{seg("store",AREAS[a],false,()=>LS.setItem("m_store",$("store").dataset.val));$("store").dataset.val="";$("m-store").textContent="";LS.setItem("m_area",a);});
+seg("hurdle",HURDLES,true);
+$("date").valueAsDate=new Date();
+// 記憶：エリア・店舗・店長名
+(function(){const a=LS.getItem("m_area");if(a&&AREAS[a]){[...$("area").querySelectorAll("button")].find(b=>b.dataset.v===a).click();$("m-area").textContent="前回を記憶";
+  const s=LS.getItem("m_store");if(s){const bt=[...$("store").querySelectorAll("button")].find(b=>b.dataset.v===s);if(bt){bt.click();$("m-store").textContent="前回を記憶";}}}
+})();
+// 数字→率を自動計算
+function num(id){const v=parseInt($(id).value,10);return isNaN(v)?0:v;}
+function calc(){const n=num("n"),w=num("w"),c=num("cov"),cw=num("covw");
+  $("k-r").textContent=n?Math.round(w/n*100)+"%":"–";
+  $("k-c").textContent=n?Math.round(c/n*100)+"%":"–";
+  $("k-ci").textContent=c?Math.round(cw/c*100)+"%":"–";
+  $("k-wn").textContent=n?`${w}/${n}`:"–";
+  // カバーが1以上で、拾えなかったカバーがある時だけ振り返り欄を出す
+  $("coverBlock").style.display=(c>0 && cw<c)?"block":"none";
+  const hikai=n-w;
+  $("winBlock").style.display=(w>0)?"block":"none";
+  $("loseBlock").style.display=(hikai>0)?"block":"none";
+  $("bookBlock").style.display=(w>0)?"block":"none";}
+["n","w","cov","covw","book","book80"].forEach(id=>{const el=$(id);if(el)el.addEventListener("input",calc);});calc();
+const val=id=>$(id).dataset.val||"";
+function build(){
+  const n=num("n"),w=num("w"),c=num("cov"),cw=num("covw");
+  const r=n?Math.round(w/n*100):0, cr=n?Math.round(c/n*100):0;
+  const L=[];
+  L.push(`【店長振り返り】${$("date").value}`);
+  L.push(`${val("area")}／${val("store")}`);
+  const ci=c?Math.round(cw/c*100):0;
+  L.push(`母数${n} ・ 入会${w}（${r}%）`);
+  L.push(`カバー${c}（${cr}%） ・ うちカバー入会${cw}（${ci}%）`);
+  if(w>0){const bk=num("book"),bk80=num("book80");const br=w?Math.round(bk/w*100):0;L.push(`次回予約${bk}／入会${w}（${br}%） ・ うち80分以上${bk80}`);}
+  const hikai=n-w;
+  if(w>0 && $("win").value.trim()){L.push("");L.push(`繋がった要因：${$("win").value.trim()}`);}
+  if(hikai>0 && val("hurdle")){L.push("");L.push(`ネックのハードル：${val("hurdle")}`);}
+  if(hikai>0 && $("lose").value.trim()){L.push(`繋がらなかった要因：${$("lose").value.trim()}`);}
+  if(c>0 && cw<c && $("cover_lose").value.trim()){L.push("");L.push(`カバーで拾えなかった要因：${$("cover_lose").value.trim()}`);}
+  if($("action").value.trim()){L.push("");L.push(`次回のアクション：${$("action").value.trim()}`);}
+  return L.join("\n");
+}
+$("send").onclick=()=>{
+  const n=num("n"),w=num("w"),c=num("cov"),cw=num("covw");
+  const hikai=n-w;
+  // 基本必須
+  if(!$("date").value||!val("area")||!val("store")||!$("n").value||!$("action").value.trim()){
+    alert("日付・エリア・店舗・母数・次回のアクションは必須です");return;}
+  // 表示されている欄は必須
+  if(w>0 && !$("win").value.trim()){alert("繋がった要因を入力してください");return;}
+  if(hikai>0 && !val("hurdle")){alert("ネックになったハードルを選んでください");return;}
+  if(hikai>0 && !$("lose").value.trim()){alert("繋がらなかった要因を入力してください");return;}
+  if(c>0 && cw<c && !$("cover_lose").value.trim()){alert("カバーで拾えなかった要因を入力してください");return;}
+  const text=build();$("text").textContent=text;$("out").classList.add("show");$("out").scrollIntoView({behavior:"smooth"});
+  if(GAS_URL){
+    const p={date:$("date").value,area:val("area"),store:val("store"),
+      bosu:n,nyukai:w,cover:c,cover_nyukai:cw,cover_lose:$("cover_lose").value,win:$("win").value,lose:$("lose").value,hurdle:val("hurdle"),action:$("action").value,next_book:(w>0?num("book"):0),next_book80:(w>0?num("book80"):0),text};
+    fetch(GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(p)}).then(()=>$("status").textContent="✓ 記録OK").catch(()=>{});}
+};
+$("copy").onclick=()=>{navigator.clipboard.writeText($("text").textContent)
+  .then(()=>$("status").textContent="✓ コピーしました。LINEワークスに貼ってください")
+  .catch(()=>{const r=document.createRange();r.selectNode($("text"));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand("copy");$("status").textContent="✓ コピーしました";});};
+$("again").onclick=()=>{$("out").classList.remove("show");window.scrollTo({top:0,behavior:"smooth"});};
+</script>
