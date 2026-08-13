@@ -57,6 +57,9 @@
   <label>性別</label>
   <div class="seg two" id="sex"></div>
 
+  <label>来店経路 <span class="req">*</span> <span class="qhint">店頭飛び込み＝オフライン ／ 事前予約＝オンライン</span></label>
+  <div class="seg two" id="route"></div>
+
   <label>来店きっかけ <span class="qhint">広告 / 紹介 / 通りがかり など</span></label>
   <input id="kikkake" />
   <label>主訴・来店目的（困りごと） <span class="req">*</span></label>
@@ -112,6 +115,7 @@ function seg(id,opts,multi,cb){const el=$(id);el.innerHTML=opts.map(o=>`<button 
     if(cb)cb(el.dataset.val);});}
 seg("area",Object.keys(AREAS),false,a=>{seg("store",AREAS[a],false,()=>LS.setItem("f_store",$("store").dataset.val));$("store").dataset.val="";$("m-store").textContent="";LS.setItem("f_area",a);});
 seg("sex",["男性","女性"],false);
+seg("route",["店頭飛び込み","事前予約"],false);
 seg("parts",["肩","首","腰","背","臀部","足","その他"],true);
 seg("result",["入会","非入会"],false,r=>{$("inBlock").classList.toggle("show",r==="入会");$("lostBlock").classList.toggle("show",r==="非入会");});
 seg("reason",REASONS,true);
@@ -138,6 +142,7 @@ function build(){
   // 基本情報を1行に圧縮
   const meta=[`結果：${val("result")}`];
   if(val("sex"))meta.push(val("sex"));
+  if(val("route"))meta.push(`経路：${val("route")}（${val("route")==="事前予約"?"オンライン":"オフライン"}）`);
   if($("kikkake").value.trim())meta.push(`きっかけ：${$("kikkake").value.trim()}`);
   L.push(meta.join(" ・ "));
   L.push("");
@@ -154,12 +159,12 @@ function build(){
 let SENT=false;
 $("send").onclick=()=>{
   if(SENT)return;
-  if(!$("date").value||!val("area")||!val("store")||!$("staff").value||!val("result")||!val("parts")){
+  if(!$("date").value||!val("area")||!val("store")||!$("staff").value||!val("result")||!val("parts")||!val("route")){
     alert("日付・エリア・店舗・担当・結果・主訴は必須です");return;}
   SENT=true;const _b=$("send");_b.disabled=true;_b.style.opacity="0.5";_b.textContent="送信済み";
   const text=build();$("text").textContent=text;$("out").classList.add("show");$("out").scrollIntoView({behavior:"smooth"});
   const c=JSON.parse(LS.getItem(dayKey())||'{"n":0,"w":0}');c.n++;if(val("result")==="入会")c.w++;LS.setItem(dayKey(),JSON.stringify(c));renderMonth();
-  if(GAS_URL){const p={date:$("date").value,area:val("area"),store:val("store"),staff:$("staff").value,sex:val("sex"),
+  if(GAS_URL){const p={date:$("date").value,area:val("area"),store:val("store"),staff:$("staff").value,sex:val("sex"),route:val("route"),online:(val("route")==="事前予約"?"オンライン":(val("route")==="店頭飛び込み"?"オフライン":"")),
     kikkake:$("kikkake").value,shusho:[val("parts"),$("shusho_free").value].filter(Boolean).join("／"),ideal:$("ideal").value,reflection:$("reflection").value,result:val("result"),
     in_reason:$("in_reason").value,reason:[val("reason"),val("reason_geo"),$("reason_free").value].filter(Boolean).join("・"),
     checks:CHECKS.map((c,i)=>c[0]+":"+(val("chk"+i)||"")).join(" / "),ap:$("ap").value,text};
