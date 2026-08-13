@@ -158,7 +158,7 @@ function num(v){const n=parseInt(v,10);return isNaN(n)?0:n;}
 
 function recDate(s){var m=String(s).replace(/\//g,"-").match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+"-"+String(+m[2]).padStart(2,'0')+"-"+String(+m[3]).padStart(2,'0');var MON={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};var e=String(s).match(/([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{4})/);if(e&&MON[e[1]])return e[3]+"-"+String(MON[e[1]]).padStart(2,'0')+"-"+String(+e[2]).padStart(2,'0');return String(s);}
 function boot(rows){
-  RAW=rows.map(r=>{const p=ymd(r.date);return{...r,bosu:num(r.bosu),nyukai:num(r.nyukai),cover:num(r.cover),covw:num(r.covw!=null?r.covw:r.cover_nyukai),nb:num(r.next_book),nb80:num(r.next_book80),_d:p?p.d:0,_mkey:p?p.key:"",_week:p?weekOf(p.d):0};}).filter(r=>r._mkey);
+  RAW=rows.map(r=>{const p=ymd(r.date);return{...r,bosu:num(r.bosu),nyukai:num(r.nyukai),cover:num(r.cover),covw:num(r.covw!=null?r.covw:r.cover_nyukai),nb:num(r.next_book),nb80:num(r.next_book80),hasBook:(r.next_book!==""&&r.next_book!=null),_d:p?p.d:0,_mkey:p?p.key:"",_week:p?weekOf(p.d):0};}).filter(r=>r._mkey);
   const months=[...new Set(RAW.map(r=>r._mkey))].sort();
   $("month").innerHTML=months.map(m=>`<option value="${m}">${m.replace("-","年")}月</option>`).join("");
   MONTH=months[months.length-1]||"";$("month").value=MONTH;
@@ -171,7 +171,8 @@ function agg(rows){ // 母数・入会・カバー・カバー入会を合計→
   const n=rows.reduce((a,r)=>a+r.bosu,0), w=rows.reduce((a,r)=>a+r.nyukai,0),
         c=rows.reduce((a,r)=>a+r.cover,0), cw=rows.reduce((a,r)=>a+r.covw,0),
         nb=rows.reduce((a,r)=>a+(r.nb||0),0), nb80=rows.reduce((a,r)=>a+(r.nb80||0),0);
-  return {n,w,c,cw,nb,nb80, r:n?w/n:null, cr:n?c/n:null, cir:c?cw/c:null, nbr:w?nb/w:null, longr:nb?nb80/nb:null};
+  const wBook=rows.reduce((a,r)=>a+(r.hasBook?r.nyukai:0),0);
+  return {n,w,c,cw,nb,nb80,wBook, r:n?w/n:null, cr:n?c/n:null, cir:c?cw/c:null, nbr:wBook?nb/wBook:null, longr:nb?nb80/nb:null};
 }
 function render(){
   const ar=$("area").value;
@@ -222,8 +223,9 @@ function render(){
       return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.cir)}</span></div><span class="wsub">入${a.cw}/カバー${a.c}</span></div>`;
     }else if(MODE==="nextbook"){
       // 次回予約率＝次回予約／入会。入会1件以上で50%未満を赤
-      const bad=a.nbr!=null&&a.w>=1&&a.nbr<0.50;
-      return `<div class="wcell"><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.nbr)}</span></div><span class="wsub">予約${a.nb}/入${a.w}</span></div>`;
+      const bad=a.nbr!=null&&a.wBook>=1&&a.nbr<0.50;
+      const sub=a.wBook>0?`予約${a.nb}/入${a.wBook}`:'記録前';
+      return `<div class="wcell"><div class="mrow ${bad?'bad':''}"><span class="vv">${a.wBook>0?pct(a.nbr):'—'}</span></div><span class="wsub">${sub}</span></div>`;
     }else{
       // ロング率＝80分以上／次回予約。次回予約1件以上で表示
       const bad=a.longr!=null&&a.nb>=1&&a.longr<0.30;
