@@ -189,7 +189,7 @@ function render(){
     return {store,weeks,total};
   });
 
-  function pct(x){return x==null?"—":Math.round(x*100)+"%";}
+  function pct(x,dec){return x==null?"—":(dec?(x*100).toFixed(dec):Math.round(x*100))+"%";}
   $("legend").innerHTML = MODE==="join"
     ? '<span><span class="dot" style="background:#fde2e2"></span>赤＝母数5件以上で入会率30%未満</span>'
     : (MODE==="coverjoin"
@@ -206,7 +206,7 @@ function render(){
         return `<div class="wcell clickable" onclick="openHist('${store}','${lbl}','view')"><span class="wkcell ${done?'fc-done':'fc-undone'}">${done?'対応済':'未対応'}</span></div>`;
       }
       const clk=bad?`class="wcell clickable" onclick="openRec('${store}','${(wk?WEEK_LABEL[wk]:'月合計')} 入会率${pct(a.r)}','view')" title="クリックで記録"`:'class="wcell"';
-      return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.r)}</span></div><span class="wsub">入${a.w}/母${a.n}</span></div>`;
+      return `<div ${clk}><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.r,1)}</span></div><span class="wsub">入${a.w}/母${a.n}</span></div>`;
     }else if(MODE==="cover"){
       const bad=a.c<=1;
       if(VIEW==="follow"){
