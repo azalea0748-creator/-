@@ -171,8 +171,20 @@ function boot(rows){
   render();
 }
 function offlineCount(store,wk){
-  const key=normStore(store)+"||"+MONTH+"||"+(wk||0);
-  const o=OFFLINE_MAP[key];
+  let targets=null;
+  if(store==="全エリア 合計"||store==="全店 合計"){ targets=[].concat(AREA_STORES["兵庫"]||[],AREA_STORES["中国"]||[]); }
+  else if(/合計/.test(store)){
+    for(const ar in AREA_STORES){ if(store.indexOf(ar)>=0){ targets=AREA_STORES[ar]; break; } }
+  }
+  if(targets){
+    let off=0,tot=0,found=false;
+    targets.forEach(function(st){
+      const o=OFFLINE_MAP[normStore(st)+"||"+MONTH+"||"+(wk||0)];
+      if(o){ off+=(o.offline||0); tot+=(o.total||0); found=true; }
+    });
+    return found? {offline:off,total:tot} : null;
+  }
+  const o=OFFLINE_MAP[normStore(store)+"||"+MONTH+"||"+(wk||0)];
   if(!o) return null;
   return {offline:(o.offline||0), total:(o.total||0)};
 }
