@@ -239,11 +239,8 @@ function render(){
       const bad=a.longr!=null&&a.nb>=1&&a.longr<0.30;
       return `<div class="wcell"><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.longr)}</span></div><span class="wsub">長${a.nb80}/予約${a.nb}</span></div>`;
     }else{
-      const key=normStore(store)+"||"+MONTH+"||"+(wk||0);
       const o=offlineCount(store,wk);
-      const mapKeys=Object.keys(OFFLINE_MAP).length;
-      if(o==null){ return `<div class="wcell"><span class="wsub" style="font-size:9px">無 ${key} 件${mapKeys}</span></div>`; }
-      if(o.total===0){ return `<div class="wcell"><span class="wsub" style="font-size:9px">total0</span></div>`; }
+      if(o==null||o.total===0){ return `<div class="wcell"><span class="wzero">—</span></div>`; }
       const rate=o.offline/o.total;
       return `<div class="wcell"><div class="mrow"><span class="vv">${pct(rate,1)}</span></div><span class="wsub">オフ${o.offline}/母${o.total}</span></div>`;
     }
@@ -323,6 +320,7 @@ window.saveRec=function(){
 
 function loadRecs(cb){if(!RECORD_URL){cb();return;}fetch(RECORD_URL).then(r=>r.json()).then(j=>{RECS=(j.rows||[]).filter(r=>r.kind==="店舗").map(r=>{var d=recDate(r.date||r.recv);return Object.assign({},r,{_date:d,_mkey:r.month||d.slice(0,7)});});cb();}).catch(()=>cb());}
 function loadOffline(cb){if(!OFFLINE_URL||OFFLINE_URL==="__OFFLINE_API__"){cb();return;}fetch(OFFLINE_URL).then(r=>r.json()).then(j=>{(j.rows||[]).forEach(function(x){OFFLINE_MAP[normStore(x.store)+"||"+x.month+"||"+(x.week||0)]=x;});cb();}).catch(()=>cb());}
-if(API_URL){loadOffline(function(){fetch(API_URL).then(r=>r.json()).then(j=>{const rows=j.rows||[];loadRecs(()=>boot(rows));}).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sampleRows());});});}
+loadOffline(function(){ if(typeof render==="function" && RAW.length) render(); });
+if(API_URL){fetch(API_URL).then(r=>r.json()).then(j=>{const rows=j.rows||[];loadRecs(()=>boot(rows));}).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sampleRows());});}
 else{$("sampleNote").style.display="block";$("sampleNote").textContent="サンプルデータで表示中。実データに繋ぐと自動で切り替わります。";boot(sampleRows());}
 </script>
