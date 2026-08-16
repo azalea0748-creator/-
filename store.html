@@ -171,10 +171,10 @@ function boot(rows){
   render();
 }
 function offlineCount(store,wk){
-  if(wk) return null;
-  const key=normStore(store)+"||"+MONTH;
+  const key=normStore(store)+"||"+MONTH+"||"+(wk||0);
   const o=OFFLINE_MAP[key];
-  return o? (o.offline||0) : null;
+  if(!o) return null;
+  return {offline:(o.offline||0), total:(o.total||0)};
 }
 function agg(rows){ // 母数・入会・カバー・カバー入会を合計→率
   const n=rows.reduce((a,r)=>a+r.bosu,0), w=rows.reduce((a,r)=>a+r.nyukai,0),
@@ -239,10 +239,10 @@ function render(){
       const bad=a.longr!=null&&a.nb>=1&&a.longr<0.30;
       return `<div class="wcell"><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.longr)}</span></div><span class="wsub">長${a.nb80}/予約${a.nb}</span></div>`;
     }else{
-      const off=offlineCount(store,wk);
-      if(a.n===0||off==null){ return `<div class="wcell"><span class="wzero">-</span></div>`; }
-      const rate=a.n?off/a.n:null;
-      return `<div class="wcell"><div class="mrow"><span class="vv">${pct(rate,1)}</span></div><span class="wsub">オフ${off}/母${a.n}</span></div>`;
+      const o=offlineCount(store,wk);
+      if(o==null||o.total===0){ return `<div class="wcell"><span class="wzero">-</span></div>`; }
+      const rate=o.total?o.offline/o.total:null;
+      return `<div class="wcell"><div class="mrow"><span class="vv">${pct(rate,1)}</span></div><span class="wsub">オフ${o.offline}/母${o.total}</span></div>`;
     }
   }
   if(rows.length===0){$("table").innerHTML='<div class="loading">この月のデータがありません</div>';return;}
@@ -319,7 +319,7 @@ window.saveRec=function(){
 };
 
 function loadRecs(cb){if(!RECORD_URL){cb();return;}fetch(RECORD_URL).then(r=>r.json()).then(j=>{RECS=(j.rows||[]).filter(r=>r.kind==="店舗").map(r=>{var d=recDate(r.date||r.recv);return Object.assign({},r,{_date:d,_mkey:r.month||d.slice(0,7)});});cb();}).catch(()=>cb());}
-function loadOffline(cb){if(!OFFLINE_URL||OFFLINE_URL==="__OFFLINE_API__"){cb();return;}fetch(OFFLINE_URL).then(r=>r.json()).then(j=>{(j.rows||[]).forEach(function(x){OFFLINE_MAP[normStore(x.store)+"||"+x.month]=x;});cb();}).catch(()=>cb());}
+function loadOffline(cb){if(!OFFLINE_URL||OFFLINE_URL==="__OFFLINE_API__"){cb();return;}fetch(OFFLINE_URL).then(r=>r.json()).then(j=>{(j.rows||[]).forEach(function(x){OFFLINE_MAP[normStore(x.store)+"||"+x.month+"||"+(x.week||0)]=x;});cb();}).catch(()=>cb());}
 if(API_URL){loadOffline(function(){fetch(API_URL).then(r=>r.json()).then(j=>{const rows=j.rows||[];loadRecs(()=>boot(rows));}).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sampleRows());});});}
 else{$("sampleNote").style.display="block";$("sampleNote").textContent="サンプルデータで表示中。実データに繋ぐと自動で切り替わります。";boot(sampleRows());}
 </script>
