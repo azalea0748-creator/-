@@ -80,6 +80,7 @@ tbody td.nm{text-align:left;font-weight:900;font-size:15px;white-space:nowrap}
     <button data-m="coverjoin">カバー入会率</button>
     <button data-m="nextbook">次回予約率</button>
     <button data-m="longcourse">ロング率</button>
+    <button data-m="offline">オフライン率</button>
   </div>
   <div class="legend" id="legend"></div>
   <div class="panel">
@@ -121,6 +122,8 @@ tbody td.nm{text-align:left;font-weight:900;font-size:15px;white-space:nowrap}
 
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbxYEISPGMAkpjxSWn3zqD2_rur6DwGo7Hqm1anx6SIuiCmqb2V7xot_yt0IpJ46figZdQ/exec"; // 店長集計のdoGet
+const OFFLINE_URL="https://script.google.com/macros/s/AKfycby-YA0NHwV4-tKxKMHssnZ6ixesrvwHHzc3-cbkvTc6wLYeS3HvpY6QKIXyX8MTlrzz/exec";
+let OFFLINE_MAP={};
 const RECORD_URL="https://script.google.com/macros/s/AKfycbwv1LAq68qfpYIy6GnOUZ8lY36FBJXvZVuWm0fy6rNlMv4DyxukYEEoYump94qnvV-tvg/exec"; // 記録書き込み用GAS。空ならデモ
 const AREA_STORES={"兵庫":["神戸北","三宮","トアロード","元町","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
 const $=id=>document.getElementById(id);
@@ -166,6 +169,12 @@ function boot(rows){
   document.querySelectorAll(".viewbar button").forEach(b=>b.onclick=()=>{VIEW=b.dataset.v;document.querySelectorAll(".viewbar button").forEach(x=>x.classList.remove("on"));b.classList.add("on");$("modebar").style.display=(VIEW==="perf")?"flex":"none";render();});
   ["month","area"].forEach(id=>$(id).onchange=()=>{MONTH=$("month").value;render();});
   render();
+}
+function offlineCount(store,wk){
+  if(wk) return null;
+  const key=normStore(store)+"||"+MONTH;
+  const o=OFFLINE_MAP[key];
+  return o? (o.offline||0) : null;
 }
 function agg(rows){ // 母数・入会・カバー・カバー入会を合計→率
   const n=rows.reduce((a,r)=>a+r.bosu,0), w=rows.reduce((a,r)=>a+r.nyukai,0),
@@ -226,10 +235,14 @@ function render(){
       const bad=a.nbr!=null&&a.wBook>=1&&a.nbr<0.50;
       const sub=a.wBook>0?`予約${a.nb}/入${a.wBook}`:'記録前';
       return `<div class="wcell"><div class="mrow ${bad?'bad':''}"><span class="vv">${a.wBook>0?pct(a.nbr):'—'}</span></div><span class="wsub">${sub}</span></div>`;
-    }else{
-      // ロング率＝80分以上／次回予約。次回予約1件以上で表示
+    }else if(MODE==="longcourse"){
       const bad=a.longr!=null&&a.nb>=1&&a.longr<0.30;
       return `<div class="wcell"><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.longr)}</span></div><span class="wsub">長${a.nb80}/予約${a.nb}</span></div>`;
+    }else{
+      const off=offlineCount(store,wk);
+      if(a.n===0||off==null){ return `<div class="wcell"><span class="wzero">-</span></div>`; }
+      const rate=a.n?off/a.n:null;
+      return `<div class="wcell"><div class="mrow"><span class="vv">${pct(rate,1)}</span></div><span class="wsub">オフ${off}/母${a.n}</span></div>`;
     }
   }
   if(rows.length===0){$("table").innerHTML='<div class="loading">この月のデータがありません</div>';return;}
@@ -306,6 +319,7 @@ window.saveRec=function(){
 };
 
 function loadRecs(cb){if(!RECORD_URL){cb();return;}fetch(RECORD_URL).then(r=>r.json()).then(j=>{RECS=(j.rows||[]).filter(r=>r.kind==="店舗").map(r=>{var d=recDate(r.date||r.recv);return Object.assign({},r,{_date:d,_mkey:r.month||d.slice(0,7)});});cb();}).catch(()=>cb());}
-if(API_URL){fetch(API_URL).then(r=>r.json()).then(j=>{const rows=j.rows||[];loadRecs(()=>boot(rows));}).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sampleRows());});}
+function loadOffline(cb){if(!OFFLINE_URL||OFFLINE_URL==="__OFFLINE_API__"){cb();return;}fetch(OFFLINE_URL).then(r=>r.json()).then(j=>{(j.rows||[]).forEach(function(x){OFFLINE_MAP[normStore(x.store)+"||"+x.month]=x;});cb();}).catch(()=>cb());}
+if(API_URL){loadOffline(function(){fetch(API_URL).then(r=>r.json()).then(j=>{const rows=j.rows||[];loadRecs(()=>boot(rows));}).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sampleRows());});});}
 else{$("sampleNote").style.display="block";$("sampleNote").textContent="サンプルデータで表示中。実データに繋ぐと自動で切り替わります。";boot(sampleRows());}
 </script>
