@@ -239,9 +239,12 @@ function render(){
       const bad=a.longr!=null&&a.nb>=1&&a.longr<0.30;
       return `<div class="wcell"><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.longr)}</span></div><span class="wsub">長${a.nb80}/予約${a.nb}</span></div>`;
     }else{
+      const key=normStore(store)+"||"+MONTH+"||"+(wk||0);
       const o=offlineCount(store,wk);
-      if(o==null||o.total===0){ return `<div class="wcell"><span class="wzero">-</span></div>`; }
-      const rate=o.total?o.offline/o.total:null;
+      const mapKeys=Object.keys(OFFLINE_MAP).length;
+      if(o==null){ return `<div class="wcell"><span class="wsub" style="font-size:9px">無 ${key} 件${mapKeys}</span></div>`; }
+      if(o.total===0){ return `<div class="wcell"><span class="wsub" style="font-size:9px">total0</span></div>`; }
+      const rate=o.offline/o.total;
       return `<div class="wcell"><div class="mrow"><span class="vv">${pct(rate,1)}</span></div><span class="wsub">オフ${o.offline}/母${o.total}</span></div>`;
     }
   }
