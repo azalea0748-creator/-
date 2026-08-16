@@ -319,6 +319,7 @@ window.saveRec=function(){
 };
 
 function loadRecs(cb){if(!RECORD_URL){cb();return;}fetch(RECORD_URL).then(r=>r.json()).then(j=>{RECS=(j.rows||[]).filter(r=>r.kind==="店舗").map(r=>{var d=recDate(r.date||r.recv);return Object.assign({},r,{_date:d,_mkey:r.month||d.slice(0,7)});});cb();}).catch(()=>cb());}
+function normStore(x){return String(x||"").replace(/\s/g,"").replace(/店$/,"");}
 function loadOffline(cb){if(!OFFLINE_URL||OFFLINE_URL==="__OFFLINE_API__"){cb();return;}fetch(OFFLINE_URL).then(r=>r.json()).then(j=>{(j.rows||[]).forEach(function(x){OFFLINE_MAP[normStore(x.store)+"||"+x.month+"||"+(x.week||0)]=x;});cb();}).catch(()=>cb());}
 loadOffline(function(){ if(typeof render==="function" && RAW.length) render(); });
 if(API_URL){fetch(API_URL).then(r=>r.json()).then(j=>{const rows=j.rows||[];loadRecs(()=>boot(rows));}).catch(e=>{$("sampleNote").style.display="block";$("sampleNote").textContent="API取得に失敗。サンプル表示中: "+e;boot(sampleRows());});}
