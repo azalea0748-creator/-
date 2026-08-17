@@ -130,6 +130,7 @@ tbody tr.danger{background:#fff5f5}
     <button data-v="follow">対応履歴</button>
     <button data-v="rank">ランキング</button>
     <button data-v="analyze">分析</button>
+    <button data-v="newbie">新人</button>
   </div>
   <div class="rankctrl" id="rankctrl" style="display:none">
     <div class="rseg2"><button data-rk="rate" class="on">入会率</button><button data-rk="count">入会数</button></div>
@@ -180,6 +181,9 @@ tbody tr.danger{background:#fff5f5}
 const API_URL="https://script.google.com/macros/s/AKfycbymLb-U79cBpBA8az64TzN3G6H0dLhLOpOiMmg229O_nXEKFsO2b896Pli7AU37r8NU/exec";
 const RECORD_URL="https://script.google.com/macros/s/AKfycbwv1LAq68qfpYIy6GnOUZ8lY36FBJXvZVuWm0fy6rNlMv4DyxukYEEoYump94qnvV-tvg/exec"; // チェック記録の書き込み用GAS。空ならデモ動作
 const GEO=["クレジット未所持","片道1時間以上の遠方","30分圏内に店舗なし","次回入会予定"];
+const NEWBIES={"神戸北":["善岡","戸田"],"三宮":["熊給","須沢"],"トアロード":["浅井"],"デュオ":["隂山","西川","政谷"],"加古川":["山本","目叶","橋本","益田"],"姫路":["藤原","大西"],"イオン岡山":["上田","石渕","笹岡"],"倉敷天満屋":["有木","有本"],"本通":["伊達","千田"],"ゆめタウン":["森川","清原"]};
+const NEWBIE_AREA={"兵庫":["神戸北","三宮","トアロード","デュオ","加古川","姫路"],"中国":["イオン岡山","倉敷天満屋","本通","ゆめタウン"]};
+function isNewbie(name,store){ const list=NEWBIES[store]||[]; return list.some(function(nb){ return String(name||"").indexOf(nb)>=0; }); }
 const STAFF_MASTER={"神戸北": ["藤原あずさ", "片山享飛", "佐藤妃乃", "坂東羽菜", "藤田和斗", "善岡那菜", "戸田嵩大"], "三宮": ["坂口望", "牧村彪雅", "谷口誠弥", "塩見倖平", "藤澤直輝", "花岡龍哉", "宮本美来", "法利岳流", "久原隆志", "三俣篤史", "藤原李華", "迫水力", "熊給遥士", "須沢一茂"], "トアロード": ["森位宏平", "福島有斗", "金田稔生", "清藤剛", "白石智揮", "坂田拓未", "浅井諒治"], "元町": ["江藤勇斗", "樫根滉太郎", "太田垣敦知", "山田慶斗", "片寄洸佑", "森岡暖人"], "デュオ": ["宮脇虎之介", "小林麗次", "樽谷一輝", "西浦文崇", "長谷川舞", "陰山湧登", "西川凌牙", "政谷碧海"], "加古川": ["奥田圭太", "名倉知穂", "森田光心", "横田聖七", "山本翔人", "目叶隆人", "橋本ひとみ", "瀬戸口智絵"], "姫路": ["江崎翔悟", "松本賢人", "黒田大樹", "平郡楓雅", "田路佳久", "美根大基", "青木琴美", "藤原大将"], "イオン岡山": ["桑渕柊耶", "河上理佳子", "宮本樹", "小林鉄平", "仙田渉", "鶴田雄祐", "住吉麻生", "上田涼央", "石渕響"], "倉敷天満屋": ["宮原美咲", "林帆那", "梅野翔", "日笠希成", "有木智治", "近藤瞳"], "本通": ["田原佳輝", "河野拓実", "中嶋華那", "梅田そら", "川角龍悟", "伊達雄風", "千田一輝"], "ゆめタウン": ["原村侑希", "平良空翔", "谷平大礎", "藤江遼", "森川充晴", "清原綾乃"]};
 // 回答の担当名を店舗マスターの最適なフルネームに寄せる
 function normName(raw, store){
@@ -243,7 +247,7 @@ function boot(rows){
   document.querySelectorAll(".viewbar button").forEach(b=>b.onclick=()=>{
     VIEW=b.dataset.v;document.querySelectorAll(".viewbar button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
     $("rankctrl").style.display=(VIEW==="rank")?"flex":"none";
-    $("panelTitle").textContent=VIEW==="perf"?"スタッフ別 週次":(VIEW==="follow"?"スタッフ別 対応履歴":(VIEW==="rank"?"ランキング":"分析・フィードバック"));
+    $("panelTitle").textContent=VIEW==="perf"?"スタッフ別 週次":(VIEW==="follow"?"スタッフ別 対応履歴":(VIEW==="rank"?"ランキング":(VIEW==="newbie"?"新人 入会率":"分析・フィードバック")));
     render();
   });
   document.querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{RK=b.dataset.rk;document.querySelectorAll('[data-rk]').forEach(x=>x.classList.remove("on"));b.classList.add("on");render();});
@@ -266,6 +270,36 @@ function parts_(shusho){
   return [...new Set(out)];
 }
 
+function renderNewbie(){
+  $("rankctrl").style.display="none";
+  const monthRows=RAW.filter(r=>r._mkey===MONTH);
+  const nb=monthRows.filter(r=>isNewbie(r.staff,r.store));
+  function calcSet(rows){
+    const set={0:{n:0,j:0},1:{n:0,j:0},2:{n:0,j:0},3:{n:0,j:0},4:{n:0,j:0},5:{n:0,j:0}};
+    rows.forEach(r=>{ const w=r._week; set[0].n++; if(isJoin(r))set[0].j++; set[w].n++; if(isJoin(r))set[w].j++; });
+    return set;
+  }
+  function rowHtml(label,rows){
+    const set=calcSet(rows);
+    let h='<tr><td class="stname">'+label+'</td>';
+    for(let w=1;w<=5;w++){ const c=set[w]; const r=c.n?Math.round(c.j/c.n*100):null; h+='<td>'+(c.n?('<b>'+r+'%</b><br><span class="wsub">'+c.j+'/'+c.n+'</span>'):'<span class="wsub">—</span>')+'</td>'; }
+    const m=set[0]; const mr=m.n?Math.round(m.j/m.n*100):null;
+    h+='<td class="mcol">'+(m.n?('<b>'+mr+'%</b><br><span class="wsub">'+m.j+'/'+m.n+'</span>'):'—')+'</td></tr>';
+    return h;
+  }
+  let h='<div class="matrix"><table><thead><tr><th>区分</th>';
+  [1,2,3,4,5].forEach(w=>h+='<th>'+WEEK_LABEL[w]+'</th>');
+  h+='<th>月合計</th></tr></thead><tbody>';
+  h+=rowHtml("新人 全体", nb);
+  for(const ar in NEWBIE_AREA){
+    const stores=NEWBIE_AREA[ar];
+    const arRows=nb.filter(r=>stores.indexOf(r.store)>=0);
+    h+=rowHtml(ar+" 新人", arRows);
+  }
+  h+='</tbody></table></div>';
+  h+='<div class="note" style="margin-top:10px">新人が担当した新規の入会率。入会/母数。週区切り1-7/8-14/15-21/22-28/29-末。右端は月合計。</div>';
+  $("staffTable").innerHTML=h;
+}
 function renderAnalyze(){
   MONTH=$("month").value;
   const ar=$("area").value, st=$("store").value;
@@ -374,6 +408,7 @@ function render(){
   MONTH=$("month").value;
   if(VIEW==="rank"){renderRank();return;}
   if(VIEW==="analyze"){renderAnalyze();return;}
+  if(VIEW==="newbie"){renderNewbie();return;}
   const st=$("store").value;
   const monthRows=filtered();
   const byStaff={};monthRows.forEach(r=>{(byStaff[r.staff]=byStaff[r.staff]||[]).push(r);});
