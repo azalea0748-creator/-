@@ -81,6 +81,7 @@ tbody td.nm{text-align:left;font-weight:900;font-size:15px;white-space:nowrap}
     <button data-m="nextbook">次回予約率</button>
     <button data-m="longcourse">ロング率</button>
     <button data-m="offline">オフライン率</button>
+    <button data-m="offjoin">オフライン入会率</button>
   </div>
   <div class="legend" id="legend"></div>
   <div class="panel">
@@ -177,16 +178,16 @@ function offlineCount(store,wk){
     for(const ar in AREA_STORES){ if(store.indexOf(ar)>=0){ targets=AREA_STORES[ar]; break; } }
   }
   if(targets){
-    let off=0,tot=0,found=false;
+    let off=0,tot=0,ofj=0,found=false;
     targets.forEach(function(st){
       const o=OFFLINE_MAP[normStore(st)+"||"+MONTH+"||"+(wk||0)];
-      if(o){ off+=(o.offline||0); tot+=(o.total||0); found=true; }
+      if(o){ off+=(o.offline||0); tot+=(o.total||0); ofj+=(o.offjoin||0); found=true; }
     });
-    return found? {offline:off,total:tot} : null;
+    return found? {offline:off,total:tot,offjoin:ofj} : null;
   }
   const o=OFFLINE_MAP[normStore(store)+"||"+MONTH+"||"+(wk||0)];
   if(!o) return null;
-  return {offline:(o.offline||0), total:(o.total||0)};
+  return {offline:(o.offline||0), total:(o.total||0), offjoin:(o.offjoin||0)};
 }
 function agg(rows){ // 母数・入会・カバー・カバー入会を合計→率
   const n=rows.reduce((a,r)=>a+r.bosu,0), w=rows.reduce((a,r)=>a+r.nyukai,0),
@@ -250,11 +251,16 @@ function render(){
     }else if(MODE==="longcourse"){
       const bad=a.longr!=null&&a.nb>=1&&a.longr<0.30;
       return `<div class="wcell"><div class="mrow ${bad?'bad':''}"><span class="vv">${pct(a.longr)}</span></div><span class="wsub">長${a.nb80}/予約${a.nb}</span></div>`;
-    }else{
+    }else if(MODE==="offline"){
       const o=offlineCount(store,wk);
       if(o==null||o.total===0){ return `<div class="wcell"><span class="wzero">—</span></div>`; }
       const rate=o.offline/o.total;
       return `<div class="wcell"><div class="mrow"><span class="vv">${pct(rate,1)}</span></div><span class="wsub">オフ${o.offline}/母${o.total}</span></div>`;
+    }else{
+      const o=offlineCount(store,wk);
+      if(o==null||o.offline===0){ return `<div class="wcell"><span class="wzero">—</span></div>`; }
+      const rate=o.offjoin/o.offline;
+      return `<div class="wcell"><div class="mrow"><span class="vv">${pct(rate,1)}</span></div><span class="wsub">入${o.offjoin}/オフ${o.offline}</span></div>`;
     }
   }
   if(rows.length===0){$("table").innerHTML='<div class="loading">この月のデータがありません</div>';return;}
